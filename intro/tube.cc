@@ -1,6 +1,6 @@
 #include <GL/glew.h>
 
-#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include "util.h"
@@ -69,7 +69,7 @@ matrix_on_seg(const bezier& seg, float u)
 			glm::vec4(dir, 0),
 			glm::vec4(0, 0, 0, 1));
 
-	glm::mat4 trans = glm::translate(glm::mat4(1), pos);
+	glm::mat4 trans = glm::translate(pos);
 
 	return trans*rot;
 }
@@ -146,7 +146,7 @@ tube::draw(float t) const
 	glLoadIdentity();
 
 #if 0
-	glm::mat4 mv = glm::translate(glm::mat4(1), glm::vec3(0, 0, -200))*glm::rotate(glm::mat4(1), 30.f*t, glm::vec3(0, 1, 0));
+	glm::mat4 mv = glm::translate(glm::vec3(0, 0, -200))*glm::rotate(30.f*t, glm::vec3(0, 1, 0));
 #else
 	const float SPEED = .5;
 
