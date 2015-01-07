@@ -64,10 +64,10 @@ matrix_on_seg(const bezier& seg, float u)
 	glm::vec3 left = glm::cross(up, dir);
 
 	glm::mat4 rot = glm::mat4(
-			glm::vec4(left, 0),
-			glm::vec4(up, 0),
-			glm::vec4(dir, 0),
-			glm::vec4(0, 0, 0, 1));
+				glm::vec4(left, 0),
+				glm::vec4(up, 0),
+				glm::vec4(dir, 0),
+				glm::vec4(0, 0, 0, 1));
 
 	glm::mat4 trans = glm::translate(pos);
 
@@ -128,11 +128,56 @@ tube::gen_segment(const glm::vec3& p0, const glm::vec3& p1)
 	for (int i = 0; i < num_segs; i++) {
 		sg::transform_node *node = new sg::transform_node(matrix_on_seg(seg, u));
 		node->add_child(std::unique_ptr<sg::node>(new sg::debug_mesh_node(make_portal_mesh())));
-
 		scene_.add_child(std::unique_ptr<sg::node>(node));
-
 		u += du;
 	}
+
+	struct seg_node : public sg::leaf_node
+	{
+		seg_node(const bezier& seg)
+		: seg_(seg)
+		{ }
+
+		void render() const
+		{
+			glColor4f(1, 0, 0, 1);
+
+			glBegin(GL_LINES);
+
+			glVertex3fv(glm::value_ptr(seg_.p0));
+			glVertex3fv(glm::value_ptr(seg_.p1));
+
+			glVertex3fv(glm::value_ptr(seg_.p1));
+			glVertex3fv(glm::value_ptr(seg_.p2));
+
+			glEnd();
+
+			glColor4f(1, 1, 1, 1);
+
+			const int num_segs = 12;
+
+			float u = 0;
+			const float du = 1./num_segs;
+
+			glBegin(GL_LINES);
+
+			for (int i = 0; i < num_segs; i++) {
+				const glm::vec3 p0 = seg_.eval(u);
+				const glm::vec3 p1 = seg_.eval(u + du);
+
+				glVertex3fv(glm::value_ptr(p0));
+				glVertex3fv(glm::value_ptr(p1));
+
+				u += du;
+			}
+
+			glEnd();
+		}
+
+		bezier seg_;
+	};
+
+	scene_.add_child(std::unique_ptr<sg::node>(new seg_node(seg)));
 }
 
 void
