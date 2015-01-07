@@ -49,6 +49,31 @@ make_portal_mesh()
 	return m;
 }
 
+glm::mat4
+matrix_on_seg(const bezier& seg, float u)
+{
+	const glm::vec3 pos = seg.eval(u);
+
+	glm::vec3 up = glm::normalize(pos);
+	glm::vec3 dir = -glm::normalize(seg.eval_dir(u));
+
+	float delta = -glm::dot(up, dir)/glm::dot(dir, dir);
+	up += delta*dir;
+	up = glm::normalize(up);
+
+	glm::vec3 left = glm::cross(up, dir);
+
+	glm::mat4 rot = glm::mat4(
+			glm::vec4(left, 0),
+			glm::vec4(up, 0),
+			glm::vec4(dir, 0),
+			glm::vec4(0, 0, 0, 1));
+
+	glm::mat4 trans = glm::translate(glm::mat4(1), pos);
+
+	return trans*rot;
+}
+
 } // namespace
 
 tube::tube(int width, int height)
@@ -101,26 +126,7 @@ tube::gen_segment(const glm::vec3& p0, const glm::vec3& p1)
 	float u = 0;
 
 	for (int i = 0; i < num_segs; i++) {
-		const glm::vec3 pos = seg.eval(u);
-
-		glm::vec3 up = glm::normalize(pos);
-		glm::vec3 dir = glm::normalize(seg.eval_dir(u));
-
-		float delta = -glm::dot(up, dir)/glm::dot(dir, dir);
-		up += delta*dir;
-		up = glm::normalize(up);
-
-		glm::vec3 left = glm::cross(up, dir);
-
-		glm::mat4 rot = glm::mat4(
-					glm::vec4(left, 0),
-					glm::vec4(up, 0),
-					glm::vec4(dir, 0),
-					glm::vec4(0, 0, 0, 1));
-		glm::mat4 trans = glm::translate(glm::mat4(1), pos);
-		glm::mat4 model = trans*rot;
-
-		sg::transform_node *node = new sg::transform_node(model);
+		sg::transform_node *node = new sg::transform_node(matrix_on_seg(seg, u));
 		node->add_child(std::unique_ptr<sg::node>(new sg::debug_mesh_node(make_portal_mesh())));
 
 		scene_.add_child(std::unique_ptr<sg::node>(node));
@@ -149,10 +155,7 @@ tube::draw(float t) const
 	const auto& seg = segs_[static_cast<int>(SPEED*t)%segs_.size()];
 	float u = fmod(SPEED*t, 1.);
 
-	const glm::vec3 pos = seg.eval(u);
-	glm::vec3 dir = glm::normalize(seg.eval_dir(u));
-
-	glm::mat4 mv = glm::lookAt(pos, pos + dir, glm::normalize(pos));
+	glm::mat4 mv = glm::inverse(matrix_on_seg(seg, u));
 #endif
 
 	scene_.draw(mv);
