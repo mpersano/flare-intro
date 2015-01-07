@@ -1,6 +1,7 @@
 #include <GL/glew.h>
 
-#include <glm/ext.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "util.h"
 #include "tube.h"
@@ -13,9 +14,42 @@ const float Z_FAR = 1000.;
 const float FOV = 45;
 
 const float BALL_RADIUS = 50.;
-const float TUBE_RADIUS = 1.5;
+const float TUBE_RADIUS = 3.;
 
-};
+mesh_ptr
+make_portal_mesh()
+{
+	mesh_ptr m(new mesh);
+
+	const int num_segs = 5;
+
+	// verts
+
+	const float da = 2.*M_PI/num_segs;
+	float a = 0;
+
+	for (int i = 0; i < num_segs; i++) {
+		const float x = TUBE_RADIUS*sinf(a);
+		const float y = TUBE_RADIUS*cosf(a);
+
+		m->verts.push_back(glm::vec3(x, y, 0));
+
+		a += da;
+	}
+
+	// poly
+
+	mesh::poly poly;
+
+	for (int i = 0; i < num_segs; i++)
+		poly.indices.push_back(i);
+
+	m->polys.push_back(poly);
+
+	return m;
+}
+
+} // namespace
 
 tube::tube(int width, int height)
 : fx(width, height)
@@ -28,17 +62,7 @@ void
 tube::gen_path(const glm::vec3& p0, const glm::vec3& p1, int depth)
 {
 	if (depth == 0) {
-		glm::vec3 pm;
-
-		if (segs_.empty()) {
-			pm = .5f*(p0 + p1);
-		} else {
-			auto& prev = segs_.back();
-			float l = .5*glm::length(p1 - p0);
-			pm = p0 + glm::normalize(p0 - prev.p1)*l;
-		}
-
-		segs_.push_back(bezier(p0, pm, p1));
+		gen_segment(p0, p1);
 	} else {
 		const float fudge = 20.;
 
@@ -56,6 +80,56 @@ tube::gen_path(const glm::vec3& p0, const glm::vec3& p1, int depth)
 }
 
 void
+tube::gen_segment(const glm::vec3& p0, const glm::vec3& p1)
+{
+	glm::vec3 pm;
+
+	if (segs_.empty()) {
+		pm = .5f*(p0 + p1);
+	} else {
+		auto& prev = segs_.back();
+		float l = .5*glm::length(p1 - p0);
+		pm = p0 + glm::normalize(p0 - prev.p1)*l;
+	}
+
+	bezier seg(p0, pm, p1);
+
+	segs_.push_back(seg);
+
+	const int num_segs = 6;
+	const float du = 1./num_segs;
+	float u = 0;
+
+	for (int i = 0; i < num_segs; i++) {
+		const glm::vec3 pos = seg.eval(u);
+
+		glm::vec3 up = glm::normalize(pos);
+		glm::vec3 dir = glm::normalize(seg.eval_dir(u));
+
+		float delta = -glm::dot(up, dir)/glm::dot(dir, dir);
+		up += delta*dir;
+		up = glm::normalize(up);
+
+		glm::vec3 left = glm::cross(up, dir);
+
+		glm::mat4 rot = glm::mat4(
+					glm::vec4(left, 0),
+					glm::vec4(up, 0),
+					glm::vec4(dir, 0),
+					glm::vec4(0, 0, 0, 1));
+		glm::mat4 trans = glm::translate(glm::mat4(1), pos);
+		glm::mat4 model = trans*rot;
+
+		sg::transform_node *node = new sg::transform_node(model);
+		node->add_child(std::unique_ptr<sg::node>(new sg::debug_mesh_node(make_portal_mesh())));
+
+		scene_.add_child(std::unique_ptr<sg::node>(node));
+
+		u += du;
+	}
+}
+
+void
 tube::draw(float t) const
 {
 	glMatrixMode(GL_PROJECTION);
@@ -66,10 +140,8 @@ tube::draw(float t) const
 	glLoadIdentity();
 
 #if 0
-	glTranslatef(0, 0, -200);
-	glRotatef(30.*t, 0, 1, 0);
+	glm::mat4 mv = glm::translate(glm::mat4(1), glm::vec3(0, 0, -200))*glm::rotate(glm::mat4(1), 30.f*t, glm::vec3(0, 1, 0));
 #else
-	{
 	const float SPEED = .5;
 
 	int cur_seg = 0;
@@ -80,107 +152,8 @@ tube::draw(float t) const
 	const glm::vec3 pos = seg.eval(u);
 	glm::vec3 dir = glm::normalize(seg.eval_dir(u));
 
-#if 0
-	glm::vec3 up = glm::normalize(pos);
-
-	float delta = -glm::dot(up, dir)/glm::dot(dir, dir);
-	up += delta*dir;
-	up = glm::normalize(up);
-#endif
-
 	glm::mat4 mv = glm::lookAt(pos, pos + dir, glm::normalize(pos));
-
-	glLoadMatrixf(glm::value_ptr(mv));
-	}
 #endif
 
-	for (auto& seg : segs_) {
-#if 1
-		glColor3f(1, 0, 0);
-
-		glBegin(GL_LINES);
-
-		glVertex3f(seg.p0.x, seg.p0.y, seg.p0.z);
-		glVertex3f(seg.p1.x, seg.p1.y, seg.p1.z);
-
-		glVertex3f(seg.p1.x, seg.p1.y, seg.p1.z);
-		glVertex3f(seg.p2.x, seg.p2.y, seg.p2.z);
-
-		glEnd();
-#endif
-		const int num_segs = 16;
-
-#if 1
-		glColor3f(1, 1, 1);
-
-		glBegin(GL_LINES);
-
-		const float du = 1./num_segs;
-
-		float u = 0;
-
-		for (int i = 0; i < num_segs; i++) {
-			glm::vec3 p0 = seg.eval(u);
-			glm::vec3 p1 = seg.eval(u + du);
-
-			glVertex3f(p0.x, p0.y, p0.z);
-			glVertex3f(p1.x, p1.y, p1.z);
-
-			u += du;
-		}
-
-		glEnd();
-#endif
-
-		{
-		float u = 0;
-		const float du = 1./num_segs;
-
-		for (int i = 0; i < num_segs; i++) {
-			const glm::vec3 pos = seg.eval(u);
-
-			glm::vec3 up = glm::normalize(pos);
-			glm::vec3 dir = glm::normalize(seg.eval_dir(u));
-
-			float delta = -glm::dot(up, dir)/glm::dot(dir, dir);
-			up += delta*dir;
-			up = glm::normalize(up);
-
-			glm::vec3 left = glm::cross(up, dir);
-
-			const int num_segs = 5;
-			const float da = 2.*M_PI/num_segs;
-
-			glBegin(GL_LINE_LOOP);
-
-			float a = 0;
-#if 1
-			for (int j = 0; j < num_segs; j++) {
-				float s = TUBE_RADIUS*sinf(a);
-				float c = TUBE_RADIUS*cosf(a);
-
-				glm::vec3 p = pos + s*up + c*left;
-
-				glVertex3f(p.x, p.y, p.z);
-
-				a += da;
-			}
-#else
-			const glm::vec3 p0 = pos + TUBE_RADIUS*up + TUBE_RADIUS*left;
-			const glm::vec3 p1 = pos + TUBE_RADIUS*up - TUBE_RADIUS*left;
-			const glm::vec3 p2 = pos - TUBE_RADIUS*up - TUBE_RADIUS*left;
-			const glm::vec3 p3 = pos - TUBE_RADIUS*up + TUBE_RADIUS*left;
-
-			glVertex3f(p0.x, p0.y, p0.z);
-			glVertex3f(p1.x, p1.y, p1.z);
-			glVertex3f(p2.x, p2.y, p2.z);
-			glVertex3f(p3.x, p3.y, p3.z);
-#endif
-
-			glEnd();
-
-			u += du;
-		}
-		}
-	}
+	scene_.draw(mv);
 }

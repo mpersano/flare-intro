@@ -10,6 +10,7 @@ link_directories(${CMAKE_BINARY_DIR}/ggl)
 
 set(INTRO_SOURCES
 	util.cc
+	scene.cc
 	bezier.cc
 	tube.cc
 	main.cc)
