@@ -51,6 +51,5 @@ intro_window::draw()
 int
 main()
 {
-	frand_init();
 	intro_window().run();
 }

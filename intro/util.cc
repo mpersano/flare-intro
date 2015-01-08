@@ -15,7 +15,7 @@ frand(float from, float to)
 }
 
 void
-frand_init()
+rand_init()
 {
 	srand(0x666);
 }

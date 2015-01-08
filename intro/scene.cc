@@ -5,11 +5,13 @@
 
 namespace sg {
 
+int leaf_draw_count;
+
 void
-group_node::draw(const glm::mat4& mv, const frustum& f) const
+group_node::draw(const glm::mat4& mv, const frustum& f, float t) const
 {
 	for (auto& p : children_)
-		p->draw(mv, f);
+		p->draw(mv, f, t);
 }
 
 void
@@ -23,20 +25,22 @@ transform_node::transform_node(const glm::mat4& mat)
 { }
 
 void
-transform_node::draw(const glm::mat4& mv, const frustum& f) const
+transform_node::draw(const glm::mat4& mv, const frustum& f, float t) const
 {
 	glm::mat4 m = mv*mat_;
 
 	for (auto& p : children_)
-		p->draw(m, f);
+		p->draw(m, f, t);
 }
 
 void
-leaf_node::draw(const glm::mat4& mv, const frustum& f) const
+leaf_node::draw(const glm::mat4& mv, const frustum& f, float t) const
 {
-	if (f.intersects(mv, get_bounding_box())) {
+	if (f.intersects(mv, get_bounding_box(t))) {
 		glLoadMatrixf(glm::value_ptr(mv));
-		render();
+		render(t);
+
+		++leaf_draw_count;
 	}
 }
 
@@ -44,15 +48,22 @@ mesh_node::mesh_node(mesh_ptr mesh)
 : mesh_(mesh)
 { }
 
-const bounding_box&
-mesh_node::get_bounding_box() const
+bounding_box
+mesh_node::get_bounding_box(float) const
 {
 	return mesh_->bbox;
 }
 
+debug_mesh_node::debug_mesh_node(mesh_ptr mesh, const glm::vec4& color)
+: mesh_node(mesh)
+, color_(color)
+{ }
+
 void
-debug_mesh_node::render() const
+debug_mesh_node::render(float) const
 {
+	glColor4fv(glm::value_ptr(color_));
+
 	for (auto& p : mesh_->polys) {
 		glBegin(GL_LINE_LOOP);
 
