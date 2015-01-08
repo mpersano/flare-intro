@@ -1,6 +1,8 @@
 #include <cmath>
 #include <cstdio>
 
+#include <algorithm>
+
 #include "frustum.h"
 
 frustum::frustum(float fov_y, float aspect, float z_near, float z_far)
@@ -19,32 +21,25 @@ bool
 frustum::intersects(const glm::mat4& transform, const bounding_box& box) const
 {
 	const glm::vec4 verts[]
-		{ glm::vec4(box.min.x, box.min.y, box.min.z, 1),
-		  glm::vec4(box.max.x, box.min.y, box.min.z, 1),
-		  glm::vec4(box.max.x, box.max.y, box.min.z, 1),
-		  glm::vec4(box.min.x, box.max.y, box.min.z, 1),
+		{ transform*glm::vec4(box.min.x, box.min.y, box.min.z, 1),
+		  transform*glm::vec4(box.max.x, box.min.y, box.min.z, 1),
+		  transform*glm::vec4(box.max.x, box.max.y, box.min.z, 1),
+		  transform*glm::vec4(box.min.x, box.max.y, box.min.z, 1),
 
-		  glm::vec4(box.min.x, box.min.y, box.max.z, 1),
-		  glm::vec4(box.max.x, box.min.y, box.max.z, 1),
-		  glm::vec4(box.max.x, box.max.y, box.max.z, 1),
-		  glm::vec4(box.min.x, box.max.y, box.max.z, 1) };
-
-	glm::vec4 transformed_verts[8];
-
-	for (int i = 0; i < 8; i++)
-		transformed_verts[i] = transform*verts[i];
+		  transform*glm::vec4(box.min.x, box.min.y, box.max.z, 1),
+		  transform*glm::vec4(box.max.x, box.min.y, box.max.z, 1),
+		  transform*glm::vec4(box.max.x, box.max.y, box.max.z, 1),
+		  transform*glm::vec4(box.min.x, box.max.y, box.max.z, 1) };
 
 	for (auto& p : planes_) {
-		bool in = false;
+		auto it = std::find_if(
+				std::begin(verts),
+				std::end(verts),
+				[&] (const glm::vec4& v) {
+					return glm::dot(p, v) > 0;
+				});
 
-		for (auto& v : transformed_verts) {
-			if (glm::dot(p, v) > 0) {
-				in = true;
-				break;
-			}
-		}
-
-		if (!in)
+		if (it == std::end(verts))
 			return false;
 	}
 
