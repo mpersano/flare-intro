@@ -5,3 +5,6 @@ frand();
 
 float
 frand(float from, float to);
+
+void
+frand_init();

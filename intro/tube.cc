@@ -7,6 +7,8 @@
 #include "tube.h"
 #include "bezier.h"
 
+int draw_count;
+
 namespace {
 
 const float Z_NEAR = 1.;
@@ -14,12 +16,12 @@ const float Z_FAR = 1000.;
 const float FOV = 45;
 
 const float BALL_RADIUS = 50.;
-const float TUBE_RADIUS = 3.;
+const float TUBE_RADIUS = 1.5;
 
 mesh_ptr
 make_portal_mesh()
 {
-	mesh_ptr m(new mesh);
+	mesh_ptr m = std::make_shared<mesh>();
 
 	const int num_segs = 5;
 
@@ -45,6 +47,7 @@ make_portal_mesh()
 		poly.indices.push_back(i);
 
 	m->polys.push_back(poly);
+	m->initialize_bounding_box();
 
 	return m;
 }
@@ -58,8 +61,7 @@ matrix_on_seg(const bezier& seg, float u)
 	glm::vec3 dir = -glm::normalize(seg.eval_dir(u));
 
 	float delta = -glm::dot(up, dir)/glm::dot(dir, dir);
-	up += delta*dir;
-	up = glm::normalize(up);
+	up = glm::normalize(up + delta*dir);
 
 	glm::vec3 left = glm::cross(up, dir);
 
@@ -136,19 +138,22 @@ tube::gen_segment(const glm::vec3& p0, const glm::vec3& p1)
 	{
 		seg_node(const bezier& seg)
 		: seg_(seg)
+		, bbox_(glm::vec3(-1000, -1000, -1000), glm::vec3(1000, 1000, 1000))
 		{ }
 
 		void render() const
 		{
+			using glm::value_ptr;
+
 			glColor4f(1, 0, 0, 1);
 
 			glBegin(GL_LINES);
 
-			glVertex3fv(glm::value_ptr(seg_.p0));
-			glVertex3fv(glm::value_ptr(seg_.p1));
+			glVertex3fv(value_ptr(seg_.p0));
+			glVertex3fv(value_ptr(seg_.p1));
 
-			glVertex3fv(glm::value_ptr(seg_.p1));
-			glVertex3fv(glm::value_ptr(seg_.p2));
+			glVertex3fv(value_ptr(seg_.p1));
+			glVertex3fv(value_ptr(seg_.p2));
 
 			glEnd();
 
@@ -162,19 +167,20 @@ tube::gen_segment(const glm::vec3& p0, const glm::vec3& p1)
 			glBegin(GL_LINES);
 
 			for (int i = 0; i < num_segs; i++) {
-				const glm::vec3 p0 = seg_.eval(u);
-				const glm::vec3 p1 = seg_.eval(u + du);
-
-				glVertex3fv(glm::value_ptr(p0));
-				glVertex3fv(glm::value_ptr(p1));
-
+				glVertex3fv(value_ptr(seg_.eval(u)));
+				glVertex3fv(value_ptr(seg_.eval(u + du)));
 				u += du;
 			}
 
 			glEnd();
 		}
 
+		const bounding_box&
+		get_bounding_box() const
+		{ return bbox_; }
+
 		bezier seg_;
+		bounding_box bbox_;
 	};
 
 	scene_.add_child(std::unique_ptr<sg::node>(new seg_node(seg)));
@@ -183,14 +189,16 @@ tube::gen_segment(const glm::vec3& p0, const glm::vec3& p1)
 void
 tube::draw(float t) const
 {
+	static const float aspect = static_cast<float>(width_)/height_;
+
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(FOV, static_cast<float>(width_)/height_, Z_NEAR, Z_FAR);
+	gluPerspective(FOV, aspect, Z_NEAR, Z_FAR);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-#if 0
+#if 1
 	glm::mat4 mv = glm::translate(glm::vec3(0, 0, -200))*glm::rotate(30.f*t, glm::vec3(0, 1, 0));
 #else
 	const float SPEED = .5;
@@ -203,5 +211,5 @@ tube::draw(float t) const
 	glm::mat4 mv = glm::inverse(matrix_on_seg(seg, u));
 #endif
 
-	scene_.draw(mv);
+	scene_.draw(mv, frustum(FOV, aspect, Z_NEAR, Z_FAR));
 }

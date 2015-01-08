@@ -6,6 +6,7 @@
 
 #include "fx.h"
 #include "tube.h"
+#include "util.h"
 
 namespace {
 
@@ -50,5 +51,6 @@ intro_window::draw()
 int
 main()
 {
+	frand_init();
 	intro_window().run();
 }

@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 
 #include "mesh.h"
+#include "frustum.h"
 
 namespace sg {
 
@@ -14,13 +15,13 @@ class node
 public:
 	virtual ~node() { }
 
-	virtual void draw(const glm::mat4& mv) const = 0;
+	virtual void draw(const glm::mat4& mv, const frustum& f) const = 0;
 };
 
 class group_node : public node
 {
 public:
-	void draw(const glm::mat4& mv) const;
+	void draw(const glm::mat4& mv, const frustum& f) const;
 
 	void add_child(std::unique_ptr<node> child);
 
@@ -33,7 +34,7 @@ struct transform_node : public group_node
 public:
 	transform_node(const glm::mat4& mat);
 
-	void draw(const glm::mat4& mv) const;
+	void draw(const glm::mat4& mv, const frustum& f) const;
 
 private:
 	glm::mat4 mat_;
@@ -42,15 +43,18 @@ private:
 class leaf_node : public node
 {
 public:
-	void draw(const glm::mat4& mv) const;
+	void draw(const glm::mat4& mv, const frustum& f) const;
 
 	virtual void render() const = 0;
+	virtual const bounding_box& get_bounding_box() const = 0;
 };
 
 class mesh_node : public leaf_node
 {
 public:
 	mesh_node(mesh_ptr mesh);
+
+	const bounding_box& get_bounding_box() const;
 
 protected:
 	mesh_ptr mesh_;

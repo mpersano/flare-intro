@@ -6,10 +6,10 @@
 namespace sg {
 
 void
-group_node::draw(const glm::mat4& mv) const
+group_node::draw(const glm::mat4& mv, const frustum& f) const
 {
 	for (auto& p : children_)
-		p->draw(mv);
+		p->draw(mv, f);
 }
 
 void
@@ -23,24 +23,32 @@ transform_node::transform_node(const glm::mat4& mat)
 { }
 
 void
-transform_node::draw(const glm::mat4& mv) const
+transform_node::draw(const glm::mat4& mv, const frustum& f) const
 {
 	glm::mat4 m = mv*mat_;
 
 	for (auto& p : children_)
-		p->draw(m);
+		p->draw(m, f);
 }
 
 void
-leaf_node::draw(const glm::mat4& mv) const
+leaf_node::draw(const glm::mat4& mv, const frustum& f) const
 {
-	glLoadMatrixf(glm::value_ptr(mv));
-	render();
+	if (f.intersects(mv, get_bounding_box())) {
+		glLoadMatrixf(glm::value_ptr(mv));
+		render();
+	}
 }
 
 mesh_node::mesh_node(mesh_ptr mesh)
 : mesh_(mesh)
 { }
+
+const bounding_box&
+mesh_node::get_bounding_box() const
+{
+	return mesh_->bbox;
+}
 
 void
 debug_mesh_node::render() const
