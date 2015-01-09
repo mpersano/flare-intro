@@ -4,13 +4,22 @@ find_package(SDL REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(GLM REQUIRED)
+find_package(OggVorbis REQUIRED)
+find_package(OpenAL REQUIRED)
 
-include_directories(${GLEW_INCLUDE_DIR} ${GLM_INCLUDE_DIRS})
+include_directories(
+	${GLEW_INCLUDE_DIR}
+	${GLM_INCLUDE_DIRS}
+	${VORBIS_INCLUDE_DIR}
+	${OGG_INCLUDE_DIR}
+	${OPENAL_INCLUDE_DIR})
+
 link_directories(${CMAKE_BINARY_DIR}/ggl)
 
 set(INTRO_SOURCES
 	util.cc
 	bounding_box.cc
+	ogg_player.cc
 	frustum.cc
 	mesh.cc
 	scene.cc
@@ -19,4 +28,14 @@ set(INTRO_SOURCES
 	main.cc)
 
 add_executable(intro ${INTRO_SOURCES})
-target_link_libraries(intro ggl ${SDL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES})
+
+target_link_libraries(
+	intro
+	ggl
+	${SDL_LIBRARY}
+	${GLEW_LIBRARY}
+	${OPENGL_LIBRARIES}
+	${VORBIS_LIBRARY}
+	${OGG_LIBRARY}
+	${VORBISFILE_LIBRARY}
+	${OPENAL_LIBRARY})
