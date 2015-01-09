@@ -3,6 +3,7 @@
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "spectrum.h"
 #include "util.h"
 #include "tube.h"
 #include "bezier.h"
@@ -267,4 +268,14 @@ tube::draw(float t) const
 	sg::leaf_draw_count = 0;
 	scene_.draw(mv, frustum(FOV, aspect, Z_NEAR, Z_FAR), t);
 	printf("%d\n", sg::leaf_draw_count);
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, width_, 0, height_, -1, 1);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	glTranslatef(20, 20, 0);
+	spectrum(*player_, static_cast<unsigned>(t*1000.)).draw_bars(32, 400, 100);
 }

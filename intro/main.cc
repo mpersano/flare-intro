@@ -87,6 +87,8 @@ intro_window::start_music()
 
 	player_->set_gain(1.);
 	player_->start();
+
+	fx_->set_ogg_player(player_.get());
 }
 
 void

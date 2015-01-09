@@ -7,11 +7,8 @@
 #include <AL/al.h>
 #include <vorbis/vorbisfile.h>
 
-class ogg_player
+struct ogg_player
 {
-	friend class spectrum_bars;
-
-public:
 	ogg_player();
 	virtual ~ogg_player();
 
@@ -29,7 +26,6 @@ public:
 	float get_track_duration() const
 	{ return static_cast<float>(num_samples)/rate; }
 
-private:
 	int get_num_buffer_samples() const;
 
 	struct buffer;

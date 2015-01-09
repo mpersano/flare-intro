@@ -20,6 +20,8 @@ set(INTRO_SOURCES
 	util.cc
 	bounding_box.cc
 	ogg_player.cc
+	fft.cc
+	spectrum.cc
 	frustum.cc
 	mesh.cc
 	scene.cc
