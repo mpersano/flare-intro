@@ -29,7 +29,7 @@ public:
 	intro_window();
 	~intro_window();
 
-	void start_music();
+	void init();
 	void draw();
 
 private:
@@ -42,12 +42,15 @@ private:
 	std::unique_ptr<ogg_player> player_;
 	std::unique_ptr<fx> fx_;
 	float start_t_;
+	int frame_count_;
+	float last_fps_update_t_;
 };
 
 intro_window::intro_window()
 : ggl::window(512, 512)
 , fx_(new tube(width_, height_))
 , start_t_(now())
+, frame_count_(0)
 {
 	init_openal();
 }
@@ -79,7 +82,7 @@ intro_window::release_openal()
 }
 
 void
-intro_window::start_music()
+intro_window::init()
 {
 	player_.reset(new ogg_player);
 
@@ -89,6 +92,8 @@ intro_window::start_music()
 	player_->start();
 
 	fx_->set_ogg_player(player_.get());
+
+	start_t_ = last_fps_update_t_ = now();
 }
 
 void
@@ -100,7 +105,17 @@ intro_window::draw()
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	fx_->draw(now() - start_t_);
+	float t = now();
+
+	fx_->draw(t - start_t_);
+
+	const int FRAMES_PER_FPS_UPDATE = 16;
+
+	if (++frame_count_ == FRAMES_PER_FPS_UPDATE) {
+		printf("%.2f\n", (static_cast<float>(FRAMES_PER_FPS_UPDATE))/(t - last_fps_update_t_));
+		last_fps_update_t_ = t;
+		frame_count_ = 0;
+	}
 }
 
 } // namespace
@@ -110,6 +125,6 @@ main()
 {
 	intro_window intro;
 
-	intro.start_music();
+	intro.init();
 	intro.run();
 }

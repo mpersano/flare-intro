@@ -18,28 +18,40 @@ public:
 	virtual ~node() { }
 
 	virtual void draw(const glm::mat4& mv, const frustum& f, float t) const = 0;
+	virtual const bounding_box& get_bounding_box() const = 0;
 };
+
+using node_ptr = std::unique_ptr<node>;
 
 class group_node : public node
 {
 public:
 	void draw(const glm::mat4& mv, const frustum& f, float t) const;
 
-	void add_child(std::unique_ptr<node> child);
+	void add_child(node_ptr child);
+
+	const bounding_box& get_bounding_box() const
+	{ return bbox_; }
 
 protected:
-	std::vector<std::unique_ptr<node>> children_;
+	std::vector<node_ptr> children_;
+	bounding_box bbox_;
 };
 
-struct transform_node : public group_node
+struct transform_node : public node
 {
 public:
-	transform_node(const glm::mat4& mat);
+	transform_node(const glm::mat4& mat, node_ptr child);
 
 	void draw(const glm::mat4& mv, const frustum& f, float t) const;
 
+	const bounding_box& get_bounding_box() const
+	{ return bbox_; }
+
 private:
 	glm::mat4 mat_;
+	node_ptr child_;
+	bounding_box bbox_;
 };
 
 class leaf_node : public node
@@ -48,7 +60,6 @@ public:
 	void draw(const glm::mat4& mv, const frustum& f, float t) const;
 
 	virtual void render(float t) const = 0;
-	virtual bounding_box get_bounding_box(float t) const = 0;
 };
 
 class mesh_node : public leaf_node
@@ -56,7 +67,7 @@ class mesh_node : public leaf_node
 public:
 	mesh_node(mesh_ptr mesh);
 
-	bounding_box get_bounding_box(float) const;
+	const bounding_box& get_bounding_box() const;
 
 protected:
 	mesh_ptr mesh_;

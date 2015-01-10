@@ -54,7 +54,7 @@ make_portal_mesh(float radius)
 	return m;
 }
 
-std::unique_ptr<sg::node>
+sg::node_ptr
 make_portal_node()
 {
 	sg::group_node *root = new sg::group_node;
@@ -66,15 +66,18 @@ make_portal_node()
 
 	for (int i = 0; i < num_sections; i++) {
 		glm::mat4 m = glm::rotate(a, glm::vec3(0, 0, 1))*glm::translate(glm::vec3(0, 1., 0));
-		sg::transform_node *transform = new sg::transform_node(m);
-		transform->add_child(std::unique_ptr<sg::node>(new sg::debug_mesh_node(make_portal_mesh(.5), glm::vec4(1, 1, 1, 1))));
 
-		root->add_child(std::unique_ptr<sg::node>(transform));
+		sg::transform_node *transform =
+			new sg::transform_node(
+				m, 
+				sg::node_ptr(new sg::debug_mesh_node(make_portal_mesh(.5), glm::vec4(1, 1, 1, 1))));
+
+		root->add_child(sg::node_ptr(transform));
 
 		a += da;
 	}
 
-	return std::unique_ptr<sg::node>(root);
+	return sg::node_ptr(root);
 }
 
 glm::mat4
@@ -111,6 +114,7 @@ tube::tube(int width, int height)
 	gen_path(glm::vec3(.25*BALL_RADIUS, BALL_RADIUS, 0), glm::vec3(0, BALL_RADIUS, 0), 6);
 	gen_path(glm::vec3(0, BALL_RADIUS, 0), glm::vec3(-.25*BALL_RADIUS, -BALL_RADIUS, 0), 6);
 
+#if 0
 	struct runner_node : public sg::node
 	{
 		runner_node(const std::vector<bezier>& path)
@@ -140,11 +144,12 @@ tube::tube(int width, int height)
 		float ang_speed_;
 		glm::vec2 xy_offset_;
 		const std::vector<bezier>& path_;
-		std::unique_ptr<sg::node> child_;
+		sg::node_ptr child_;
 	};
 
 	for (int i = 0; i < NUM_PARTICLES; i++)
-		scene_.add_child(std::unique_ptr<sg::node>(new runner_node(segs_)));
+		scene_.add_child(sg::node_ptr(new runner_node(segs_)));
+#endif
 }
 
 void
@@ -171,6 +176,8 @@ tube::gen_path(const glm::vec3& p0, const glm::vec3& p1, int depth)
 void
 tube::gen_segment(const glm::vec3& p0, const glm::vec3& p1)
 {
+	// bezier seg
+
 	glm::vec3 pm;
 
 	if (segs_.empty()) {
@@ -185,16 +192,26 @@ tube::gen_segment(const glm::vec3& p0, const glm::vec3& p1)
 
 	segs_.push_back(seg);
 
+	// portals
+
+	sg::group_node *group = new sg::group_node;
+
 	const int num_segs = 6;
 	const float du = 1./num_segs;
 	float u = 0;
 
 	for (int i = 0; i < num_segs; i++) {
-		sg::transform_node *transform = new sg::transform_node(matrix_on_seg(seg, u));
-		transform->add_child(make_portal_node());
-		scene_.add_child(std::unique_ptr<sg::node>(transform));
+		sg::transform_node *transform =
+			new sg::transform_node(
+				matrix_on_seg(seg, u),
+				make_portal_node());
+		group->add_child(sg::node_ptr(transform));
 		u += du;
 	}
+
+	scene_.add_child(sg::node_ptr(group));
+
+	// seg node
 
 	struct seg_node : public sg::leaf_node
 	{
@@ -231,7 +248,7 @@ tube::gen_segment(const glm::vec3& p0, const glm::vec3& p1)
 			glEnd();
 		}
 
-		bounding_box
+		const bounding_box&
 		get_bounding_box(float) const
 		{ return bbox_; }
 
@@ -239,7 +256,7 @@ tube::gen_segment(const glm::vec3& p0, const glm::vec3& p1)
 		bounding_box bbox_;
 	};
 
-	// scene_.add_child(std::unique_ptr<sg::node>(new seg_node(seg)));
+	// scene_.add_child(sg::node_ptr(new seg_node(seg)));
 }
 
 void
@@ -267,7 +284,7 @@ tube::draw(float t) const
 
 	sg::leaf_draw_count = 0;
 	scene_.draw(mv, frustum(FOV, aspect, Z_NEAR, Z_FAR), t);
-	printf("%d\n", sg::leaf_draw_count);
+	// printf("%d\n", sg::leaf_draw_count);
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
