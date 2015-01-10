@@ -3,7 +3,7 @@
 #include <vector>
 #include <memory>
 
-#include <glm/glm.hpp>
+#include <glm/vec3.hpp>
 
 #include "bounding_box.h"
 

@@ -3,6 +3,8 @@
 
 #include <algorithm>
 
+#include <glm/geometric.hpp>
+
 #include "frustum.h"
 
 frustum::frustum(float fov_y, float aspect, float z_near, float z_far)

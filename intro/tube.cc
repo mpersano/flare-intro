@@ -62,7 +62,7 @@ make_portal_node()
 	const int num_sections = 5;
 
 	float a = 0;
-	const float da = 360./num_sections; // angles not radians$@#!!!
+	const float da = 2.*M_PI/num_sections;
 
 	for (int i = 0; i < num_sections; i++) {
 		glm::mat4 m = glm::rotate(a, glm::vec3(0, 0, 1))*glm::translate(glm::vec3(0, 1., 0));
