@@ -13,6 +13,5 @@ struct spectrum
 		LOG2_WINDOW_SIZE = 12,
 	};
 
-	float sample_window[WINDOW_SIZE];
 	float spectrum_window[WINDOW_SIZE/2];
 };

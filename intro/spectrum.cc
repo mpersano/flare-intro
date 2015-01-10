@@ -8,6 +8,8 @@
 
 spectrum::spectrum(const ogg_player& player, unsigned cur_ms)
 {
+	static float sample_window[WINDOW_SIZE];
+
 	const int buffer_samples = player.get_num_buffer_samples();
 	const int total_buffer_samples = buffer_samples*ogg_player::NUM_BUFFERS;
 
@@ -55,7 +57,7 @@ spectrum::spectrum(const ogg_player& player, unsigned cur_ms)
 void
 spectrum::draw_bars(int num_bands, int width, int height) const
 {
-	const int num_samples = WINDOW_SIZE/4;
+	const int num_samples = WINDOW_SIZE/8;
 	const int samples_per_band = num_samples/num_bands;
 	const int dx = width/num_bands;
 
