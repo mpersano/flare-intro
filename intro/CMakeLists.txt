@@ -6,13 +6,15 @@ find_package(OpenGL REQUIRED)
 find_package(GLM REQUIRED)
 find_package(OggVorbis REQUIRED)
 find_package(OpenAL REQUIRED)
+find_package(PNG REQUIRED)
 
 include_directories(
 	${GLEW_INCLUDE_DIR}
 	${GLM_INCLUDE_DIRS}
 	${VORBIS_INCLUDE_DIR}
 	${OGG_INCLUDE_DIR}
-	${OPENAL_INCLUDE_DIR})
+	${OPENAL_INCLUDE_DIR}
+	${PNG_INCLUDE_DIRS})
 
 link_directories(${CMAKE_BINARY_DIR}/ggl)
 
@@ -23,11 +25,11 @@ set(INTRO_SOURCES
 	fft.cc
 	spectrum.cc
 	frustum.cc
-	mesh.cc
 	scene.cc
 	bezier.cc
 	tube.cc
-	main.cc)
+	main.cc
+	particle_texture.cc)
 
 add_executable(intro ${INTRO_SOURCES})
 
@@ -40,4 +42,5 @@ target_link_libraries(
 	${VORBIS_LIBRARY}
 	${OGG_LIBRARY}
 	${VORBISFILE_LIBRARY}
-	${OPENAL_LIBRARY})
+	${OPENAL_LIBRARY}
+	${PNG_LIBRARIES})

@@ -2,10 +2,13 @@
 
 #include <vector>
 
+#include <ggl/texture.h>
+
 #include "fx.h"
 #include "bezier.h"
-#include "mesh.h"
 #include "scene.h"
+
+class particle;
 
 class tube : public fx
 {
@@ -20,4 +23,6 @@ private:
 
 	std::vector<bezier> segs_;
 	sg::group_node scene_;
+	std::vector<std::unique_ptr<particle>> particles_;
+	ggl::texture particle_texture_;
 };

@@ -7,7 +7,6 @@
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 
-#include "mesh.h"
 #include "frustum.h"
 
 namespace sg {
@@ -60,28 +59,6 @@ public:
 	void draw(const glm::mat4& mv, const frustum& f, float t) const;
 
 	virtual void render(float t) const = 0;
-};
-
-class mesh_node : public leaf_node
-{
-public:
-	mesh_node(mesh_ptr mesh);
-
-	const bounding_box& get_bounding_box() const;
-
-protected:
-	mesh_ptr mesh_;
-};
-
-class debug_mesh_node : public mesh_node
-{
-public:
-	debug_mesh_node(mesh_ptr mesh, const glm::vec4& color);
-
-	void render(float) const;
-
-private:
-	glm::vec4 color_;
 };
 
 extern int leaf_draw_count;

@@ -58,34 +58,4 @@ leaf_node::draw(const glm::mat4& mv, const frustum& f, float t) const
 	}
 }
 
-mesh_node::mesh_node(mesh_ptr mesh)
-: mesh_(mesh)
-{ }
-
-const bounding_box&
-mesh_node::get_bounding_box() const
-{
-	return mesh_->bbox;
-}
-
-debug_mesh_node::debug_mesh_node(mesh_ptr mesh, const glm::vec4& color)
-: mesh_node(mesh)
-, color_(color)
-{ }
-
-void
-debug_mesh_node::render(float) const
-{
-	glColor4fv(glm::value_ptr(color_));
-
-	for (auto& p : mesh_->polys) {
-		glBegin(GL_LINE_LOOP);
-
-		for (auto& i : p.indices)
-			glVertex3fv(glm::value_ptr(mesh_->verts[i]));
-
-		glEnd();
-	}
-}
-
 } // sg

@@ -2,10 +2,16 @@
 
 #include "util.h"
 
+int
+irand()
+{
+	return rand();
+}
+
 float
 frand()
 {
-	return static_cast<float>(rand())/RAND_MAX;
+	return static_cast<float>(irand())/RAND_MAX;
 }
 
 float

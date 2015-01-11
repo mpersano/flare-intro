@@ -1,32 +1,58 @@
+#include <cstdio>
+#include <map>
+
 #include "texture.h"
 
 namespace ggl {
 
-texture::texture(int width, int height)
+namespace {
+
+std::map<pixmap::pixel_type, GLint> pixel_formats
+	{ { pixmap::pixel_type::GRAY, GL_LUMINANCE },
+	  { pixmap::pixel_type::GRAY_ALPHA, GL_LUMINANCE_ALPHA },
+	  { pixmap::pixel_type::RGB, GL_RGB },
+	  { pixmap::pixel_type::RGB_ALPHA, GL_RGBA } };
+
+template <typename T>
+static T
+next_power_of_2(T n)
 {
-	glGenTextures(1, &id_);
+	T p = 1;
+
+	while (p < n)
+		p *= 2;
+
+	return p;
+}
+
+} // anonymous namespaces
+
+void
+texture::load(const pixmap& pm)
+{
+	orig_width_ = pm.width;
+	width_ = next_power_of_2(orig_width_);
+
+	orig_height_ = pm.height;
+	height_ = next_power_of_2(orig_height_);
 
 	bind();
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	const GLint format = pixel_formats[pm.type];
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-}
+	pixmap resized_pm = pm.resize(width_, height_);
 
-texture::~texture()
-{
-	glDeleteTextures(1, &id_);
-}
-
-void
-texture::bind() const
-{
-	glBindTexture(GL_TEXTURE_2D, id_);
+	glTexImage2D(
+		GL_TEXTURE_2D,
+		0,
+		format,
+		width_, height_,
+		0,
+		format,
+		GL_UNSIGNED_BYTE,
+		&resized_pm.data[0]);
 }
 
 }

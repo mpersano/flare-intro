@@ -9,8 +9,7 @@
 #include "util.h"
 #include "tube.h"
 #include "bezier.h"
-
-int draw_count;
+#include "particle_texture.h"
 
 namespace {
 
@@ -44,40 +43,6 @@ update_spectrum_bars(const spectrum &s)
 	}
 }
 
-mesh_ptr
-make_portal_mesh(float radius)
-{
-	mesh_ptr m = std::make_shared<mesh>();
-
-	const int num_segs = 5;
-
-	// verts
-
-	const float da = 2.*M_PI/num_segs;
-	float a = 0;
-
-	for (int i = 0; i < num_segs; i++) {
-		const float x = radius*sinf(a);
-		const float y = radius*cosf(a);
-
-		m->verts.push_back(glm::vec3(x, y, 0));
-
-		a += da;
-	}
-
-	// poly
-
-	mesh::poly poly;
-
-	for (int i = 0; i < num_segs; i++)
-		poly.indices.push_back(i);
-
-	m->polys.push_back(poly);
-	m->initialize_bounding_box();
-
-	return m;
-}
-
 sg::node_ptr
 make_portal_cell(float spectrum_offset)
 {
@@ -86,16 +51,12 @@ make_portal_cell(float spectrum_offset)
 		cell_node(float spectrum_offset)
 		: spectrum_offset_(spectrum_offset)
 		{
-			const int num_segs = 5;
-
-			verts_.reserve(2*num_segs);
-
-			const float da = 2.*M_PI/num_segs;
+			const float da = 2.*M_PI/NUM_SIDES;
 			float a = 0;
 
 			const float r = .5;
 
-			for (int i = 0; i < num_segs; i++) {
+			for (int i = 0; i < NUM_SIDES; i++) {
 				const glm::vec2 p0(r*sinf(a), r*cosf(a));
 				const glm::vec2 p1(r*sinf(a + da), r*cosf(a + da));
 
@@ -111,8 +72,8 @@ make_portal_cell(float spectrum_offset)
 				const glm::vec2 p11 = .8f*p01;
 				bbox_ += glm::vec3(p11, 0);
 
-				verts_.push_back(std::make_pair(p00, p10));
-				verts_.push_back(std::make_pair(p01, p11));
+				verts_[i*2] = std::make_pair(p00, p10);
+				verts_[i*2 + 1] = std::make_pair(p01, p11);
 
 				a += da;
 			}
@@ -149,7 +110,9 @@ make_portal_cell(float spectrum_offset)
 		get_bounding_box() const
 		{ return bbox_; }
 
-		std::vector<std::pair<glm::vec2, glm::vec2>> verts_;
+		enum { NUM_SIDES = 5 };
+		std::pair<glm::vec2, glm::vec2> verts_[2*NUM_SIDES];
+
 		bounding_box bbox_;
 		float spectrum_offset_;
 	};
@@ -202,6 +165,49 @@ matrix_on_seg(const bezier& seg, float u)
 
 } // namespace
 
+struct particle
+{
+	particle(const std::vector<bezier>& path)
+	: speed_(frand(.15, .3)*((irand() & 1) ? -1 : 1))
+	, pos_offset_(frand(0, 5000.))
+	, path_(path)
+	{ }
+
+	void draw(const glm::mat4& mv, const frustum& f, float t) const;
+
+	float speed_;
+	float pos_offset_;
+	const std::vector<bezier>& path_;
+};
+
+void
+particle::draw(const glm::mat4& mv, const frustum& f, float t) const
+{
+	float pos = speed_*t + pos_offset_;
+
+	const auto& seg = path_[static_cast<int>(pos)%path_.size()];
+	float u = fmod(pos, 1.);
+
+	const glm::vec3 p = seg.eval(u);
+
+	glm::mat4 m = mv*glm::translate(p);
+	m[0] = glm::vec4(1, 0, 0, 0);
+	m[1] = glm::vec4(0, 1, 0, 0);
+	m[2] = glm::vec4(0, 0, 1, 0);
+	glLoadMatrixf(glm::value_ptr(m));
+
+	glColor4f(1, 1, 1, 1);
+
+	const float r = 1.;
+
+	glBegin(GL_QUADS);
+	glTexCoord2f(0, 0); glVertex2f(-r, -r);
+	glTexCoord2f(1, 0); glVertex2f(r, -r);
+	glTexCoord2f(1, 1); glVertex2f(r, r);
+	glTexCoord2f(0, 1); glVertex2f(-r, r);
+	glEnd();
+}
+
 tube::tube(int width, int height)
 : fx(width, height)
 {
@@ -210,42 +216,18 @@ tube::tube(int width, int height)
 	gen_path(glm::vec3(.25*BALL_RADIUS, BALL_RADIUS, 0), glm::vec3(0, BALL_RADIUS, 0), 6);
 	gen_path(glm::vec3(0, BALL_RADIUS, 0), glm::vec3(-.25*BALL_RADIUS, -BALL_RADIUS, 0), 6);
 
-#if 0
-	struct runner_node : public sg::node
-	{
-		runner_node(const std::vector<bezier>& path)
-		: speed_(frand(.15, .3))
-		, pos_offset_(frand(0, 5000.))
-		, ang_speed_(frand(30, 100))
-		, xy_offset_(frand(-.5, .5), frand(-.5, .5))
-		, path_(path)
-		, child_(new sg::debug_mesh_node(make_portal_mesh(.15), glm::vec4(1, 0, 0, 1)))
-		{ }
-
-		void draw(const glm::mat4& mv, const frustum& f, float t) const
-		{
-			float pos = speed_*t + pos_offset_;
-			float ang = ang_speed_*t;
-
-			const auto& seg = path_[static_cast<int>(pos)%path_.size()];
-			float u = fmod(pos, 1.);
-
-			glm::mat4 m = matrix_on_seg(seg, u)*glm::rotate(ang, glm::vec3(0, 0, 1))*glm::translate(glm::vec3(xy_offset_, 0));
-
-			child_->draw(mv*m, f, t);
-		}
-
-		float speed_;
-		float pos_offset_;
-		float ang_speed_;
-		glm::vec2 xy_offset_;
-		const std::vector<bezier>& path_;
-		sg::node_ptr child_;
-	};
-
 	for (int i = 0; i < NUM_PARTICLES; i++)
-		scene_.add_child(sg::node_ptr(new runner_node(segs_)));
-#endif
+		particles_.push_back(std::unique_ptr<particle>(new particle(segs_)));
+
+	particle_texture_.load(*render_particle_texture());
+
+	particle_texture_.set_wrap_s(GL_CLAMP);
+	particle_texture_.set_wrap_t(GL_CLAMP);
+
+	particle_texture_.set_mag_filter(GL_LINEAR);
+	particle_texture_.set_min_filter(GL_LINEAR);
+
+	particle_texture_.set_env_mode(GL_MODULATE);
 }
 
 void
@@ -306,53 +288,6 @@ tube::gen_segment(const glm::vec3& p0, const glm::vec3& p1)
 	}
 
 	scene_.add_child(sg::node_ptr(group));
-
-	// seg node
-
-	struct seg_node : public sg::leaf_node
-	{
-		seg_node(const bezier& seg)
-		{
-			const int num_segs = 12;
-
-			float u = 0;
-			const float du = 1./num_segs;
-
-			for (int i = 0; i <= num_segs; i++) {
-				glm::vec3 p = seg.eval(u);
-
-				verts_.push_back(p);
-				bbox_ += p;
-
-				u += du;
-			}
-		}
-
-		void render(float) const
-		{
-			using glm::value_ptr;
-
-			glColor4f(1, 1, 1, 1);
-
-			glBegin(GL_LINES);
-
-			for (int i = 0; i < verts_.size() - 1; i++) {
-				glVertex3fv(value_ptr(verts_[i]));
-				glVertex3fv(value_ptr(verts_[i + 1]));
-			}
-
-			glEnd();
-		}
-
-		const bounding_box&
-		get_bounding_box(float) const
-		{ return bbox_; }
-
-		std::vector<glm::vec3> verts_;
-		bounding_box bbox_;
-	};
-
-	// scene_.add_child(sg::node_ptr(new seg_node(seg)));
 }
 
 void
@@ -374,24 +309,38 @@ tube::draw(float t) const
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE);
 
+	glDisable(GL_TEXTURE_2D);
+
 #if 0
 	glm::mat4 mv = glm::translate(glm::vec3(0, 0, -200))*glm::rotate(.08f*t, glm::vec3(0, 1, 0));
 #else
-#if 1
 	const float SPEED = .125;
-
+#if 1
 	const auto& seg = segs_[static_cast<int>(SPEED*t)%segs_.size()];
 	float u = fmod(SPEED*t, 1.);
 #else
-	const auto& seg = segs_[0];
-	float u = 0;
+	const float q = 1000;
+	const auto& seg = segs_[static_cast<int>(SPEED*q)%segs_.size()];
+	float u = fmod(SPEED*q, 1.);
 #endif
-	glm::mat4 mv = glm::inverse(matrix_on_seg(seg, u));
+	glm::mat4 mv = glm::inverse(
+		matrix_on_seg(seg, u)*
+		glm::translate(glm::vec3(0, .5, 0)));
 #endif
 
+	const frustum f(FOV, aspect, Z_NEAR, Z_FAR);
+
 	sg::leaf_draw_count = 0;
-	scene_.draw(mv, frustum(FOV, aspect, Z_NEAR, Z_FAR), t);
+	scene_.draw(mv, f, t);
 	// printf("%d\n", sg::leaf_draw_count);
+
+	glEnable(GL_TEXTURE_2D);
+	particle_texture_.bind();
+
+	for (auto& p : particles_)
+		p->draw(mv, f, t);
+
+	glDisable(GL_TEXTURE_2D);
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
