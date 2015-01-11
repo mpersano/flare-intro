@@ -20,6 +20,7 @@ link_directories(${CMAKE_BINARY_DIR}/ggl)
 
 set(INTRO_SOURCES
 	util.cc
+	program_manager.cc
 	bounding_box.cc
 	ogg_player.cc
 	fft.cc

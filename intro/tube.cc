@@ -5,6 +5,9 @@
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <ggl/vertex_array.h>
+
+#include "program_manager.h"
 #include "spectrum.h"
 #include "util.h"
 #include "tube.h"
@@ -19,7 +22,7 @@ const float FOV = 45;
 
 const float BALL_RADIUS = 50.;
 
-const int NUM_PARTICLES = 1500;
+const int NUM_PARTICLES = 1600;
 
 static const int NUM_SPECTRUM_BANDS = 30;
 float spectrum_bars[NUM_SPECTRUM_BANDS];
@@ -44,12 +47,15 @@ update_spectrum_bars(const spectrum &s)
 }
 
 sg::node_ptr
-make_portal_cell(float spectrum_offset)
+make_portal_cell(int viewport_width, int viewport_height, float spectrum_offset)
 {
 	struct cell_node : public sg::leaf_node
 	{
-		cell_node(float spectrum_offset)
-		: spectrum_offset_(spectrum_offset)
+		cell_node(int viewport_width, int viewport_height, float spectrum_offset)
+		: viewport_width_(viewport_width)
+		, viewport_height_(viewport_height)
+		, spectrum_offset_(spectrum_offset)
+		, program_(program_manager::get_instance().get("data/shaders/vert-wiretri.glsl", "data/shaders/frag-wiretri.glsl"))
 		{
 			const float da = 2.*M_PI/NUM_SIDES;
 			float a = 0;
@@ -61,15 +67,14 @@ make_portal_cell(float spectrum_offset)
 				const glm::vec2 p1(r*sinf(a + da), r*cosf(a + da));
 
 				const glm::vec2 p00 = p0;
-				bbox_ += glm::vec3(p00, 0);
-
-				const glm::vec2 p10 = 3.f*p00;
-				bbox_ += glm::vec3(p10, 0);
-
 				const glm::vec2 p01 = .5f*(p0 + p1);
-				bbox_ += glm::vec3(p10, 0);
 
-				const glm::vec2 p11 = .8f*p01;
+				const glm::vec2 p10 = .9f*p00;
+				const glm::vec2 p11 = 3.f*p01;
+
+				bbox_ += glm::vec3(p00, 0);
+				bbox_ += glm::vec3(p01, 0);
+				bbox_ += glm::vec3(p10, 0);
 				bbox_ += glm::vec3(p11, 0);
 
 				verts_[i*2] = std::make_pair(p00, p10);
@@ -94,34 +99,80 @@ make_portal_cell(float spectrum_offset)
 
 			float c = .25f + .75f*state;
 
-			glColor4f(c, c, c, c);
+			static ggl::vertex_array<ggl::vertex_texcoord<2, 1>> va(3*NUM_VERTS);
 
-			glBegin(GL_LINE_LOOP);
+			va.clear();
 
-			for (auto& v : verts_) {
-				glm::vec2 p = state*v.second + (1.f - state)*v.first;
-				glVertex2fv(glm::value_ptr(p));
+			for (int i = 0; i < NUM_VERTS; i++) {
+				const auto& v0 = verts_[i];
+				const auto& v1 = verts_[(i + 1)%NUM_VERTS];
+
+				glm::vec2 p0(0, 0);
+				glm::vec2 p1 = state*v0.second + (1.f - state)*v0.first;
+				glm::vec2 p2 = state*v1.second + (1.f - state)*v1.first;
+
+				// world coords --> screen coords
+
+				glm::mat4 projection;
+				glGetFloatv(GL_PROJECTION_MATRIX, glm::value_ptr(projection));
+
+				glm::mat4 modelview;
+				glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(modelview));
+
+				glm::mat4 projection_modelview = projection*modelview;
+
+				glm::vec2 viewport(viewport_width_, viewport_height_);
+
+				glm::vec4 p0_transformed = projection_modelview*glm::vec4(p0, 0, 1);
+
+				// normalized screen coords (-1, -1), (1, 1) to actual screen coords
+				glm::vec2 p0_screen = (p0_transformed.xy()/p0_transformed.w)*.5f*viewport;
+
+				glm::vec4 p1_transformed = projection_modelview*glm::vec4(p1, 0, 1);
+				glm::vec2 p1_screen = (p1_transformed.xy()/p1_transformed.w)*.5f*viewport;
+
+				glm::vec4 p2_transformed = projection_modelview*glm::vec4(p2, 0, 1);
+				glm::vec2 p2_screen = (p2_transformed.xy()/p2_transformed.w)*.5f*viewport;
+
+				// interpolate distance from verts to opposite edge
+
+				{
+				glm::vec2 v0 = p2_screen - p1_screen;
+				glm::vec2 v1 = p2_screen - p0_screen;
+				glm::vec2 v2 = p1_screen - p0_screen;
+
+				float area = fabs(v1.x*v2.y - v1.y*v2.x);
+
+				va.add_vertex({{ p0.x, p0.y }, { area/glm::length(v0) }});
+				va.add_vertex({{ p1.x, p1.y }, { 0 }});
+				va.add_vertex({{ p2.x, p2.y }, { 0 }});
+				}
 			}
 
-			glEnd();
+			program_->use();
+			program_->set_uniform_f("thick", 1.);
+			program_->set_uniform_f("color", c, c, c);
+			va.draw(GL_TRIANGLES);
 		}
 
 		const bounding_box&
 		get_bounding_box() const
 		{ return bbox_; }
 
-		enum { NUM_SIDES = 5 };
-		std::pair<glm::vec2, glm::vec2> verts_[2*NUM_SIDES];
+		enum { NUM_SIDES = 5, NUM_VERTS = 2*NUM_SIDES };
+		std::pair<glm::vec2, glm::vec2> verts_[NUM_VERTS];
 
+		int viewport_width_, viewport_height_;
 		bounding_box bbox_;
 		float spectrum_offset_;
+		const ggl::program *program_;
 	};
 
-	return std::unique_ptr<sg::node>(new cell_node(spectrum_offset));
+	return std::unique_ptr<sg::node>(new cell_node(viewport_width, viewport_height, spectrum_offset));
 }
 
 sg::node_ptr
-make_portal_node(const float *values, int num_sections, float spectrum_offset)
+make_portal_node(int viewport_width, int viewport_height, const float *values, int num_sections, float spectrum_offset)
 {
 	sg::group_node *root = new sg::group_node;
 
@@ -130,7 +181,7 @@ make_portal_node(const float *values, int num_sections, float spectrum_offset)
 
 	for (int i = 0; i < num_sections; i++) {
 		glm::mat4 m = glm::rotate(a, glm::vec3(0, 0, 1))*glm::translate(glm::vec3(0, 1., 0));
-		sg::transform_node *transform = new sg::transform_node(m, make_portal_cell(spectrum_offset + i));
+		sg::transform_node *transform = new sg::transform_node(m, make_portal_cell(viewport_width, viewport_height, spectrum_offset + i));
 		root->add_child(sg::node_ptr(transform));
 
 		a += da;
@@ -167,18 +218,30 @@ matrix_on_seg(const bezier& seg, float u)
 
 struct particle
 {
-	particle(const std::vector<bezier>& path)
-	: speed_(frand(.15, .3)*((irand() & 1) ? -1 : 1))
-	, pos_offset_(frand(0, 5000.))
-	, path_(path)
-	{ }
+	particle(const std::vector<bezier>& path);
 
 	void draw(const glm::mat4& mv, const frustum& f, float t) const;
 
 	float speed_;
 	float pos_offset_;
+	glm::vec3 offset_;
 	const std::vector<bezier>& path_;
+	ggl::vertex_array<ggl::vertex_texcoord<2, 2>> va_;
 };
+
+particle::particle(const std::vector<bezier>& path)
+: speed_(frand(.15, .3)*((irand() & 1) ? -1 : 1))
+, pos_offset_(frand(0, 5000.))
+, offset_(frand(-.5, .5), frand(-.5, .5), frand(-.5, .5))
+, path_(path)
+{
+	const float r = 1.;
+
+	va_.add_vertex({{ -r, -r }, { 0, 0 }});
+	va_.add_vertex({{ r, -r }, { 1, 0 }});
+	va_.add_vertex({{ -r, r }, { 0, 1 }});
+	va_.add_vertex({{ r, r }, { 1, 1 }});
+}
 
 void
 particle::draw(const glm::mat4& mv, const frustum& f, float t) const
@@ -188,7 +251,7 @@ particle::draw(const glm::mat4& mv, const frustum& f, float t) const
 	const auto& seg = path_[static_cast<int>(pos)%path_.size()];
 	float u = fmod(pos, 1.);
 
-	const glm::vec3 p = seg.eval(u);
+	const glm::vec3 p = seg.eval(u) + offset_;
 
 	glm::mat4 m = mv*glm::translate(p);
 	m[0] = glm::vec4(1, 0, 0, 0);
@@ -196,16 +259,7 @@ particle::draw(const glm::mat4& mv, const frustum& f, float t) const
 	m[2] = glm::vec4(0, 0, 1, 0);
 	glLoadMatrixf(glm::value_ptr(m));
 
-	glColor4f(1, 1, 1, 1);
-
-	const float r = 1.;
-
-	glBegin(GL_QUADS);
-	glTexCoord2f(0, 0); glVertex2f(-r, -r);
-	glTexCoord2f(1, 0); glVertex2f(r, -r);
-	glTexCoord2f(1, 1); glVertex2f(r, r);
-	glTexCoord2f(0, 1); glVertex2f(-r, r);
-	glEnd();
+	va_.draw(GL_TRIANGLE_STRIP);
 }
 
 tube::tube(int width, int height)
@@ -228,6 +282,10 @@ tube::tube(int width, int height)
 	particle_texture_.set_min_filter(GL_LINEAR);
 
 	particle_texture_.set_env_mode(GL_MODULATE);
+
+	particle_program_.attach_vertex_shader("data/shaders/vert-particle.glsl");
+	particle_program_.attach_fragment_shader("data/shaders/frag-particle.glsl");
+	particle_program_.link();
 }
 
 void
@@ -282,7 +340,7 @@ tube::gen_segment(const glm::vec3& p0, const glm::vec3& p1)
 		sg::transform_node *transform =
 			new sg::transform_node(
 				matrix_on_seg(seg, u),
-				make_portal_node(spectrum_bars, 5, 6*i));
+				make_portal_node(width_, height_, spectrum_bars, 5, 6*i));
 		group->add_child(sg::node_ptr(transform));
 		u += du;
 	}
@@ -293,11 +351,25 @@ tube::gen_segment(const glm::vec3& p0, const glm::vec3& p1)
 void
 tube::draw(float t) const
 {
-	spectrum s(*player_, static_cast<unsigned>(t*1000.));
+	if (player_) {
+		spectrum s(*player_, static_cast<unsigned>(t*1000.));
 
-	update_spectrum_bars(s);
+		update_spectrum_bars(s);
 
-	static const float aspect = static_cast<float>(width_)/height_;
+		glDisable(GL_TEXTURE_2D);
+
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glOrtho(0, width_, 0, height_, -1, 1);
+
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+
+		glTranslatef(20, 20, 0);
+		s.draw_bars(30, 400, 100);
+	}
+
+	const float aspect = static_cast<float>(width_)/height_;
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -337,18 +409,10 @@ tube::draw(float t) const
 	glEnable(GL_TEXTURE_2D);
 	particle_texture_.bind();
 
+	particle_program_.use();
+
 	for (auto& p : particles_)
 		p->draw(mv, f, t);
 
-	glDisable(GL_TEXTURE_2D);
-
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glOrtho(0, width_, 0, height_, -1, 1);
-
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-
-	glTranslatef(20, 20, 0);
-	s.draw_bars(30, 400, 100);
+	glUseProgram(0);
 }

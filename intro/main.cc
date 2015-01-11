@@ -1,5 +1,7 @@
 #include <memory>
 
+#include <unistd.h>
+
 #include <GL/glew.h>
 
 #include <ggl/window.h>
@@ -26,7 +28,7 @@ now()
 class intro_window : public ggl::window
 {
 public:
-	intro_window();
+	intro_window(bool mute = false);
 	~intro_window();
 
 	void init();
@@ -44,20 +46,24 @@ private:
 	float start_t_;
 	int frame_count_;
 	float last_fps_update_t_;
+	bool mute_;
 };
 
-intro_window::intro_window()
-: ggl::window(512, 512)
+intro_window::intro_window(bool mute)
+: ggl::window(512, 256)
 , fx_(new tube(width_, height_))
 , start_t_(now())
 , frame_count_(0)
+, mute_(mute)
 {
-	init_openal();
+	if (!mute_)
+		init_openal();
 }
 
 intro_window::~intro_window()
 {
-	release_openal();
+	if (!mute_)
+		release_openal();
 }
 
 void
@@ -84,14 +90,16 @@ intro_window::release_openal()
 void
 intro_window::init()
 {
-	player_.reset(new ogg_player);
+	if (!mute_) {
+		player_.reset(new ogg_player);
 
-	player_->open("music.ogg");
+		player_->open("data/music/music.ogg");
 
-	player_->set_gain(1.);
-	player_->start();
+		player_->set_gain(1.);
+		player_->start();
 
-	fx_->set_ogg_player(player_.get());
+		fx_->set_ogg_player(player_.get());
+	}
 
 	start_t_ = last_fps_update_t_ = now();
 }
@@ -99,7 +107,8 @@ intro_window::init()
 void
 intro_window::draw()
 {
-	player_->update();
+	if (player_)
+		player_->update();
 
 	glViewport(0, 0, width_, height_);
 	glClearColor(0, 0, 0, 0);
@@ -121,10 +130,21 @@ intro_window::draw()
 } // namespace
 
 int
-main()
+main(int argc, char *argv[])
 {
-	intro_window intro;
+	bool mute = false;
 
+	int c;
+
+	while ((c = getopt(argc, argv, "m")) != EOF) {
+		switch (c) {
+			case 'm':
+				mute = true;
+				break;
+		}
+	}
+
+	intro_window intro(mute);
 	intro.init();
 	intro.run();
 }
