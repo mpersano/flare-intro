@@ -97,57 +97,56 @@ make_portal_cell(int viewport_width, int viewport_height, float spectrum_offset)
 			if (state > 1.)
 				state = 1;
 
-			float c = .25f + .75f*state;
+			static glm::vec2 obj_verts[NUM_VERTS], screen_verts[NUM_VERTS], screen_center;
+
+			glm::mat4 projection, modelview;
+			glGetFloatv(GL_PROJECTION_MATRIX, glm::value_ptr(projection));
+			glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(modelview));
+
+			glm::mat4 projection_modelview = projection*modelview;
+
+			glm::vec2 viewport(viewport_width_, viewport_height_);
+
+			for (int i = 0; i < NUM_VERTS; i++) {
+				obj_verts[i] = state*verts_[i].second + (1.f - state)*verts_[i].first;
+
+				// obj -> world
+				glm::vec4 p = projection_modelview*glm::vec4(obj_verts[i], 0, 1);
+
+				// world -> screen
+				screen_verts[i] = (p.xy()/p.w)*.5f*viewport;
+			}
+
+			{
+			glm::vec4 p = projection_modelview*glm::vec4(0, 0, 0, 1);
+			screen_center = (p.xy()/p.w)*.5f*viewport;
+			}
 
 			static ggl::vertex_array<ggl::vertex_texcoord<2, 1>> va(3*NUM_VERTS);
 
 			va.clear();
 
 			for (int i = 0; i < NUM_VERTS; i++) {
-				const auto& v0 = verts_[i];
-				const auto& v1 = verts_[(i + 1)%NUM_VERTS];
+				int j = (i + 1)%NUM_VERTS;
 
-				glm::vec2 p0(0, 0);
-				glm::vec2 p1 = state*v0.second + (1.f - state)*v0.first;
-				glm::vec2 p2 = state*v1.second + (1.f - state)*v1.first;
+				const glm::vec2& p0 = obj_verts[i];
+				const glm::vec2& p1 = obj_verts[j];
 
-				// world coords --> screen coords
+				const glm::vec2& q0 = screen_verts[i];
+				const glm::vec2& q1 = screen_verts[j];
 
-				glm::mat4 projection;
-				glGetFloatv(GL_PROJECTION_MATRIX, glm::value_ptr(projection));
-
-				glm::mat4 modelview;
-				glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(modelview));
-
-				glm::mat4 projection_modelview = projection*modelview;
-
-				glm::vec2 viewport(viewport_width_, viewport_height_);
-
-				glm::vec4 p0_transformed = projection_modelview*glm::vec4(p0, 0, 1);
-
-				// normalized screen coords (-1, -1), (1, 1) to actual screen coords
-				glm::vec2 p0_screen = (p0_transformed.xy()/p0_transformed.w)*.5f*viewport;
-
-				glm::vec4 p1_transformed = projection_modelview*glm::vec4(p1, 0, 1);
-				glm::vec2 p1_screen = (p1_transformed.xy()/p1_transformed.w)*.5f*viewport;
-
-				glm::vec4 p2_transformed = projection_modelview*glm::vec4(p2, 0, 1);
-				glm::vec2 p2_screen = (p2_transformed.xy()/p2_transformed.w)*.5f*viewport;
-
-				// interpolate distance from verts to opposite edge
-
-				{
-				glm::vec2 v0 = p2_screen - p1_screen;
-				glm::vec2 v1 = p2_screen - p0_screen;
-				glm::vec2 v2 = p1_screen - p0_screen;
+				const glm::vec2 v0 = q1 - q0;
+				const glm::vec2 v1 = q1 - screen_center;
+				const glm::vec2 v2 = q0 - screen_center;
 
 				float area = fabs(v1.x*v2.y - v1.y*v2.x);
 
-				va.add_vertex({{ p0.x, p0.y }, { area/glm::length(v0) }});
+				va.add_vertex({{ 0, 0 }, { area/glm::length(v0) }});
+				va.add_vertex({{ p0.x, p0.y }, { 0 }});
 				va.add_vertex({{ p1.x, p1.y }, { 0 }});
-				va.add_vertex({{ p2.x, p2.y }, { 0 }});
-				}
 			}
+
+			float c = .25f + .75f*state;
 
 			program_->use();
 			program_->set_uniform_f("thick", 1.);
