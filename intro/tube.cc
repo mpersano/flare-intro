@@ -7,8 +7,8 @@
 
 #include <ggl/vertex_array.h>
 
+#include "common.h"
 #include "program_manager.h"
-#include "spectrum.h"
 #include "util.h"
 #include "tube.h"
 #include "bezier.h"
@@ -24,37 +24,13 @@ const float BALL_RADIUS = 50.;
 
 const int NUM_PARTICLES = 1600;
 
-static const int NUM_SPECTRUM_BANDS = 30;
-float spectrum_bars[NUM_SPECTRUM_BANDS];
-
-void
-update_spectrum_bars(const spectrum &s)
-{
-	const int num_samples = spectrum::WINDOW_SIZE/8;
-	const int samples_per_band = num_samples/NUM_SPECTRUM_BANDS;
-
-	for (int i = 0; i < NUM_SPECTRUM_BANDS; i++) {
-		float w = 0;
-
-		for (int j = 0; j < samples_per_band; j++)
-			w += s.spectrum_window[i*samples_per_band + j];
-
-		w /= samples_per_band;
-		w = sqrtf(w);
-
-		spectrum_bars[i] = w;
-	}
-}
-
 sg::node_ptr
-make_portal_cell(int viewport_width, int viewport_height, float spectrum_offset)
+make_portal_cell(float spectrum_offset)
 {
 	struct cell_node : public sg::leaf_node
 	{
-		cell_node(int viewport_width, int viewport_height, float spectrum_offset)
-		: viewport_width_(viewport_width)
-		, viewport_height_(viewport_height)
-		, spectrum_offset_(spectrum_offset)
+		cell_node(float spectrum_offset)
+		: spectrum_offset_(spectrum_offset)
 		, program_(program_manager::get_instance().get("data/shaders/vert-wiretri.glsl", "data/shaders/frag-wiretri.glsl"))
 		{
 			const float da = 2.*M_PI/NUM_SIDES;
@@ -91,7 +67,7 @@ make_portal_cell(int viewport_width, int viewport_height, float spectrum_offset)
 			int index = static_cast<int>(offset)%NUM_SPECTRUM_BANDS;
 			float s = offset - static_cast<int>(offset);
 
-			float value = (1. - s)*spectrum_bars[index] + s*spectrum_bars[(index + 1)%NUM_SPECTRUM_BANDS];
+			float value = (1. - s)*g_spectrum_bars[index] + s*g_spectrum_bars[(index + 1)%NUM_SPECTRUM_BANDS];
 
 			float state = 10.*value;
 			if (state > 1.)
@@ -105,7 +81,7 @@ make_portal_cell(int viewport_width, int viewport_height, float spectrum_offset)
 
 			glm::mat4 projection_modelview = projection*modelview;
 
-			glm::vec2 viewport(viewport_width_, viewport_height_);
+			glm::vec2 viewport(g_viewport_width, g_viewport_height);
 
 			for (int i = 0; i < NUM_VERTS; i++) {
 				obj_verts[i] = state*verts_[i].second + (1.f - state)*verts_[i].first;
@@ -161,17 +137,16 @@ make_portal_cell(int viewport_width, int viewport_height, float spectrum_offset)
 		enum { NUM_SIDES = 5, NUM_VERTS = 2*NUM_SIDES };
 		std::pair<glm::vec2, glm::vec2> verts_[NUM_VERTS];
 
-		int viewport_width_, viewport_height_;
 		bounding_box bbox_;
 		float spectrum_offset_;
 		const ggl::program *program_;
 	};
 
-	return std::unique_ptr<sg::node>(new cell_node(viewport_width, viewport_height, spectrum_offset));
+	return std::unique_ptr<sg::node>(new cell_node(spectrum_offset));
 }
 
 sg::node_ptr
-make_portal_node(int viewport_width, int viewport_height, const float *values, int num_sections, float spectrum_offset)
+make_portal_node(int num_sections, float spectrum_offset)
 {
 	sg::group_node *root = new sg::group_node;
 
@@ -180,7 +155,7 @@ make_portal_node(int viewport_width, int viewport_height, const float *values, i
 
 	for (int i = 0; i < num_sections; i++) {
 		glm::mat4 m = glm::rotate(a, glm::vec3(0, 0, 1))*glm::translate(glm::vec3(0, 1., 0));
-		sg::transform_node *transform = new sg::transform_node(m, make_portal_cell(viewport_width, viewport_height, spectrum_offset + i));
+		sg::transform_node *transform = new sg::transform_node(m, make_portal_cell(spectrum_offset + i));
 		root->add_child(sg::node_ptr(transform));
 
 		a += da;
@@ -262,8 +237,7 @@ particle::draw(vertex_array& va, const glm::vec3& up, const glm::vec3& right, fl
 	va.add_vertex({{ p0.x, p0.y, p0.z }, { 0, 0 }});
 }
 
-tube::tube(int width, int height)
-: fx(width, height)
+tube::tube()
 {
 	rand_init();
 
@@ -340,7 +314,7 @@ tube::gen_segment(const glm::vec3& p0, const glm::vec3& p1)
 		sg::transform_node *transform =
 			new sg::transform_node(
 				matrix_on_seg(seg, u),
-				make_portal_node(width_, height_, spectrum_bars, 5, 6*i));
+				make_portal_node(5, 6*i));
 		group->add_child(sg::node_ptr(transform));
 		u += du;
 	}
@@ -351,27 +325,7 @@ tube::gen_segment(const glm::vec3& p0, const glm::vec3& p1)
 void
 tube::draw(float t) const
 {
-	if (player_) {
-		spectrum s(*player_, static_cast<unsigned>(t*1000.));
-
-		update_spectrum_bars(s);
-
-		glDisable(GL_TEXTURE_2D);
-
-		glUseProgram(0);
-
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glOrtho(0, width_, 0, height_, -1, 1);
-
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-
-		glTranslatef(20, 20, 0);
-		s.draw_bars(30, 400, 100);
-	}
-
-	const float aspect = static_cast<float>(width_)/height_;
+	const float aspect = static_cast<float>(g_viewport_width)/g_viewport_height;
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();

@@ -14,7 +14,7 @@ class particle;
 class tube : public fx
 {
 public:
-	tube(int width, int height);
+	tube();
 
 	void draw(float t) const;
 
