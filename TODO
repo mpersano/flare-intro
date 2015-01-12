@@ -1,8 +1,12 @@
 TODO
   v upgrade to glm 0.9.5+ (to improve compilation time with #include <glm/vec3.hpp> instead of <glm/glm.hpp>)
   * intro effect
-  * tube effect
-    * "runner" billboard particles
-    * portal animation
-    * music sync
+    * logo
+    * credits
+  v tube effect
+    v "runner" billboard particles
+      v upload full vertex array
+    v portal animation
+    v music sync
+    * camera paths
   * everything else

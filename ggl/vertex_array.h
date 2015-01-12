@@ -6,33 +6,78 @@
 
 namespace ggl {
 
-template <int N>
+template <typename VertexType, int VertexSize>
 struct vertex_flat
 {
-	GLfloat pos[N];
+	VertexType pos[VertexSize];
 };
 
-template <int N, int M>
+template <typename VertexType, int VertexSize, typename TexCoordType, int TexCoordSize>
 struct vertex_texcoord
 {
-	GLfloat pos[N];
-	GLfloat texcoord[M];
+	VertexType pos[VertexSize];
+	TexCoordType texcoord[TexCoordSize];
 };
 
 namespace detail {
 
+template <typename GLType>
+struct gltype_to_glenum;
+
+template <>
+struct gltype_to_glenum<GLbyte>
+{
+	static const GLenum type = GL_BYTE;
+};
+
+template <>
+struct gltype_to_glenum<GLubyte>
+{
+	static const GLenum type = GL_UNSIGNED_BYTE;
+};
+
+template <>
+struct gltype_to_glenum<GLshort>
+{
+	static const GLenum type = GL_SHORT;
+};
+
+template <>
+struct gltype_to_glenum<GLushort>
+{
+	static const GLenum type = GL_UNSIGNED_SHORT;
+};
+
+template <>
+struct gltype_to_glenum<GLint>
+{
+	static const GLenum type = GL_INT;
+};
+
+template <>
+struct gltype_to_glenum<GLuint>
+{
+	static const GLenum type = GL_UNSIGNED_INT;
+};
+
+template <>
+struct gltype_to_glenum<GLfloat>
+{
+	static const GLenum type = GL_FLOAT;
+};
+
 // RAII <3 <3 <3
 
-template <typename VertexType>
+template <typename Vertex>
 struct client_state;
 
-template <int N>
-struct client_state<vertex_flat<N>>
+template <typename VertexType, int VertexSize>
+struct client_state<vertex_flat<VertexType, VertexSize>>
 {
-	client_state(const vertex_flat<N> *verts)
+	client_state(const vertex_flat<VertexType, VertexSize> *verts)
 	{
 		glEnableClientState(GL_VERTEX_ARRAY);
-		glVertexPointer(N, GL_FLOAT, sizeof *verts, verts->pos);
+		glVertexPointer(VertexSize, gltype_to_glenum<VertexType>::type, sizeof *verts, verts->pos);
 	}
 
 	~client_state()
@@ -41,16 +86,16 @@ struct client_state<vertex_flat<N>>
 	}
 };
 
-template <int N, int M>
-struct client_state<vertex_texcoord<N, M>>
+template <typename VertexType, int VertexSize, typename TexCoordType, int TexCoordSize>
+struct client_state<vertex_texcoord<VertexType, VertexSize, TexCoordType, TexCoordSize>>
 {
-	client_state(const vertex_texcoord<N, M> *verts)
+	client_state(const vertex_texcoord<VertexType, VertexSize, TexCoordType, TexCoordSize> *verts)
 	{
 		glEnableClientState(GL_VERTEX_ARRAY);
-		glVertexPointer(N, GL_FLOAT, sizeof *verts, verts->pos);
+		glVertexPointer(VertexSize, gltype_to_glenum<VertexType>::type, sizeof *verts, verts->pos);
 
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		glTexCoordPointer(M, GL_FLOAT, sizeof *verts, verts->texcoord);
+		glTexCoordPointer(TexCoordSize, gltype_to_glenum<TexCoordType>::type, sizeof *verts, verts->texcoord);
 	}
 
 	~client_state()

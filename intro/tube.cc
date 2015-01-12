@@ -122,7 +122,7 @@ make_portal_cell(int viewport_width, int viewport_height, float spectrum_offset)
 			screen_center = (p.xy()/p.w)*.5f*viewport;
 			}
 
-			static ggl::vertex_array<ggl::vertex_texcoord<2, 1>> va(3*NUM_VERTS);
+			static ggl::vertex_array<ggl::vertex_texcoord<GLfloat, 2, GLfloat, 1>> va(3*NUM_VERTS);
 
 			va.clear();
 
@@ -217,15 +217,16 @@ matrix_on_seg(const bezier& seg, float u)
 
 struct particle
 {
+	using vertex_array = ggl::vertex_array<ggl::vertex_texcoord<GLfloat, 3, GLshort, 2>>;
+
 	particle(const std::vector<bezier>& path);
 
-	void draw(const glm::mat4& mv, const frustum& f, float t) const;
+	void draw(vertex_array& va, const glm::vec3& up, const glm::vec3& right, float t) const;
 
 	float speed_;
 	float pos_offset_;
 	glm::vec3 offset_;
 	const std::vector<bezier>& path_;
-	ggl::vertex_array<ggl::vertex_texcoord<2, 2>> va_;
 };
 
 particle::particle(const std::vector<bezier>& path)
@@ -233,17 +234,10 @@ particle::particle(const std::vector<bezier>& path)
 , pos_offset_(frand(0, 5000.))
 , offset_(frand(-.5, .5), frand(-.5, .5), frand(-.5, .5))
 , path_(path)
-{
-	const float r = 1.;
-
-	va_.add_vertex({{ -r, -r }, { 0, 0 }});
-	va_.add_vertex({{ r, -r }, { 1, 0 }});
-	va_.add_vertex({{ -r, r }, { 0, 1 }});
-	va_.add_vertex({{ r, r }, { 1, 1 }});
-}
+{ }
 
 void
-particle::draw(const glm::mat4& mv, const frustum& f, float t) const
+particle::draw(vertex_array& va, const glm::vec3& up, const glm::vec3& right, float t) const
 {
 	float pos = speed_*t + pos_offset_;
 
@@ -252,13 +246,20 @@ particle::draw(const glm::mat4& mv, const frustum& f, float t) const
 
 	const glm::vec3 p = seg.eval(u) + offset_;
 
-	glm::mat4 m = mv*glm::translate(p);
-	m[0] = glm::vec4(1, 0, 0, 0);
-	m[1] = glm::vec4(0, 1, 0, 0);
-	m[2] = glm::vec4(0, 0, 1, 0);
-	glLoadMatrixf(glm::value_ptr(m));
+	const float r = 1.;
 
-	va_.draw(GL_TRIANGLE_STRIP);
+	const glm::vec3 p0 = p - r*up - r*right;
+	const glm::vec3 p1 = p - r*up + r*right;
+	const glm::vec3 p2 = p + r*up + r*right;
+	const glm::vec3 p3 = p + r*up - r*right;
+
+	va.add_vertex({{ p0.x, p0.y, p0.z }, { 0, 0 }});
+	va.add_vertex({{ p1.x, p1.y, p1.z }, { 1, 0 }});
+	va.add_vertex({{ p2.x, p2.y, p2.z }, { 1, 1 }});
+
+	va.add_vertex({{ p2.x, p2.y, p2.z }, { 1, 1 }});
+	va.add_vertex({{ p3.x, p3.y, p3.z }, { 0, 1 }});
+	va.add_vertex({{ p0.x, p0.y, p0.z }, { 0, 0 }});
 }
 
 tube::tube(int width, int height)
@@ -357,6 +358,8 @@ tube::draw(float t) const
 
 		glDisable(GL_TEXTURE_2D);
 
+		glUseProgram(0);
+
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
 		glOrtho(0, width_, 0, height_, -1, 1);
@@ -405,13 +408,24 @@ tube::draw(float t) const
 	scene_.draw(mv, f, t);
 	// printf("%d\n", sg::leaf_draw_count);
 
+	{
 	glEnable(GL_TEXTURE_2D);
 	particle_texture_.bind();
 
 	particle_program_.use();
 
-	for (auto& p : particles_)
-		p->draw(mv, f, t);
+	glLoadMatrixf(glm::value_ptr(mv));
 
-	glUseProgram(0);
+	glm::vec3 up(mv[0][0], mv[1][0], mv[2][0]);
+	glm::vec3 right(mv[0][1], mv[1][1], mv[2][1]);
+
+	static particle::vertex_array va(6*NUM_PARTICLES);
+
+	va.clear();
+
+	for (auto& p : particles_)
+		p->draw(va, up, right, t);
+
+	va.draw(GL_TRIANGLES);
+	}
 }
