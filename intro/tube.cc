@@ -231,10 +231,7 @@ particle::draw(vertex_array& va, const glm::vec3& up, const glm::vec3& right, fl
 	va.add_vertex({{ p0.x, p0.y, p0.z }, { 0, 0 }});
 	va.add_vertex({{ p1.x, p1.y, p1.z }, { 1, 0 }});
 	va.add_vertex({{ p2.x, p2.y, p2.z }, { 1, 1 }});
-
-	va.add_vertex({{ p2.x, p2.y, p2.z }, { 1, 1 }});
 	va.add_vertex({{ p3.x, p3.y, p3.z }, { 0, 1 }});
-	va.add_vertex({{ p0.x, p0.y, p0.z }, { 0, 0 }});
 }
 
 tube::tube()
@@ -373,13 +370,13 @@ tube::draw(float t) const
 	glm::vec3 up(mv[0][0], mv[1][0], mv[2][0]);
 	glm::vec3 right(mv[0][1], mv[1][1], mv[2][1]);
 
-	static particle::vertex_array va(6*NUM_PARTICLES);
+	static particle::vertex_array va(4*NUM_PARTICLES);
 
 	va.clear();
 
 	for (auto& p : particles_)
 		p->draw(va, up, right, t);
 
-	va.draw(GL_TRIANGLES);
+	va.draw(GL_QUADS);
 	}
 }
