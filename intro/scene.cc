@@ -7,8 +7,6 @@
 
 namespace sg {
 
-int leaf_draw_count;
-
 void
 group_node::draw(const glm::mat4& mv, const frustum& f, float t) const
 {
@@ -53,8 +51,6 @@ leaf_node::draw(const glm::mat4& mv, const frustum& f, float t) const
 	if (f.intersects(mv, get_bounding_box())) {
 		glLoadMatrixf(glm::value_ptr(mv));
 		render(t);
-
-		++leaf_draw_count;
 	}
 }
 

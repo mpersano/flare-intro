@@ -1,11 +1,7 @@
-#include <GL/glew.h>
-
 #include <glm/vec2.hpp>
 
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
-#include <ggl/vertex_array.h>
 
 #include "common.h"
 #include "program_manager.h"
@@ -190,20 +186,6 @@ matrix_on_seg(const bezier& seg, float u)
 
 } // namespace
 
-struct particle
-{
-	using vertex_array = ggl::vertex_array<ggl::vertex_texcoord<GLfloat, 3, GLshort, 2>>;
-
-	particle(const std::vector<bezier>& path);
-
-	void draw(vertex_array& va, const glm::vec3& up, const glm::vec3& right, float t) const;
-
-	float speed_;
-	float pos_offset_;
-	glm::vec3 offset_;
-	const std::vector<bezier>& path_;
-};
-
 particle::particle(const std::vector<bezier>& path)
 : speed_(frand(.15, .3)*((irand() & 1) ? -1 : 1))
 , pos_offset_(frand(0, 5000.))
@@ -234,6 +216,20 @@ particle::draw(vertex_array& va, const glm::vec3& up, const glm::vec3& right, fl
 	va.add_vertex({{ p3.x, p3.y, p3.z }, { 0, 1 }});
 }
 
+camera_path::camera_path(const bezier& path, float ttl)
+: path_(path)
+, up_(glm::normalize(glm::cross(path_.p0 - path_.p1, path_.p2 - path_.p1)))
+, ttl_(ttl)
+{ }
+
+glm::mat4
+camera_path::get_mv(float t) const
+{
+	const float u = fmod(t, ttl_)/ttl_;
+	const glm::vec3 pos = path_.eval(u);
+	return glm::lookAt(pos, glm::vec3(0, 0, 0), up_);
+}
+
 tube::tube()
 {
 	rand_init();
@@ -242,7 +238,7 @@ tube::tube()
 	gen_path(glm::vec3(0, BALL_RADIUS, 0), glm::vec3(-.25*BALL_RADIUS, -BALL_RADIUS, 0), 6);
 
 	for (int i = 0; i < NUM_PARTICLES; i++)
-		particles_.push_back(std::unique_ptr<particle>(new particle(segs_)));
+		particles_.push_back(particle(segs_));
 
 	particle_texture_.load(*render_particle_texture());
 
@@ -257,6 +253,14 @@ tube::tube()
 	particle_program_.attach_vertex_shader("data/shaders/vert-particle.glsl");
 	particle_program_.attach_fragment_shader("data/shaders/frag-particle.glsl");
 	particle_program_.link();
+
+	camera_paths_.push_back(
+		camera_path(
+			bezier(
+				glm::vec3(0, 0, -2.*BALL_RADIUS),
+				glm::vec3(2.*BALL_RADIUS, 0, -2.*BALL_RADIUS),
+				glm::vec3(2.*BALL_RADIUS, 0, 0)),
+			5.));
 }
 
 void
@@ -322,6 +326,26 @@ tube::gen_segment(const glm::vec3& p0, const glm::vec3& p1)
 void
 tube::draw(float t) const
 {
+#if 0
+#if 0
+	glm::mat4 mv = glm::translate(glm::vec3(0, 0, -200))*glm::rotate(.08f*t, glm::vec3(0, 1, 0));
+#else
+	const float SPEED = .125;
+	const auto& seg = segs_[static_cast<int>(SPEED*t)%segs_.size()];
+	float u = fmod(SPEED*t, 1.);
+#endif
+
+	glm::mat4 mv = glm::inverse(matrix_on_seg(seg, u)*glm::translate(glm::vec3(0, .5, 0)));
+#else
+	glm::mat4 mv = camera_paths_[0].get_mv(t);
+#endif
+
+	draw(mv, false, t);
+}
+
+void
+tube::draw(const glm::mat4& mv, bool show_particles, float t) const
+{
 	const float aspect = static_cast<float>(g_viewport_width)/g_viewport_height;
 
 	glMatrixMode(GL_PROJECTION);
@@ -334,49 +358,31 @@ tube::draw(float t) const
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE);
 
-	glDisable(GL_TEXTURE_2D);
-
-#if 0
-	glm::mat4 mv = glm::translate(glm::vec3(0, 0, -200))*glm::rotate(.08f*t, glm::vec3(0, 1, 0));
-#else
-	const float SPEED = .125;
-#if 1
-	const auto& seg = segs_[static_cast<int>(SPEED*t)%segs_.size()];
-	float u = fmod(SPEED*t, 1.);
-#else
-	const float q = 1000;
-	const auto& seg = segs_[static_cast<int>(SPEED*q)%segs_.size()];
-	float u = fmod(SPEED*q, 1.);
-#endif
-	glm::mat4 mv = glm::inverse(
-		matrix_on_seg(seg, u)*
-		glm::translate(glm::vec3(0, .5, 0)));
-#endif
-
 	const frustum f(FOV, aspect, Z_NEAR, Z_FAR);
 
-	sg::leaf_draw_count = 0;
+	// scene
+
 	scene_.draw(mv, f, t);
-	// printf("%d\n", sg::leaf_draw_count);
 
-	{
-	glEnable(GL_TEXTURE_2D);
-	particle_texture_.bind();
+	// particles
 
-	particle_program_.use();
+	if (show_particles) {
+		particle_texture_.bind();
 
-	glLoadMatrixf(glm::value_ptr(mv));
+		particle_program_.use();
 
-	glm::vec3 up(mv[0][0], mv[1][0], mv[2][0]);
-	glm::vec3 right(mv[0][1], mv[1][1], mv[2][1]);
+		glLoadMatrixf(glm::value_ptr(mv));
 
-	static particle::vertex_array va(4*NUM_PARTICLES);
+		glm::vec3 up(mv[0][0], mv[1][0], mv[2][0]);
+		glm::vec3 right(mv[0][1], mv[1][1], mv[2][1]);
 
-	va.clear();
+		static particle::vertex_array va(4*NUM_PARTICLES);
 
-	for (auto& p : particles_)
-		p->draw(va, up, right, t);
+		va.clear();
 
-	va.draw(GL_QUADS);
+		for (auto& p : particles_)
+			p.draw(va, up, right, t);
+
+		va.draw(GL_QUADS);
 	}
 }

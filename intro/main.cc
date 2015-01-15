@@ -111,7 +111,8 @@ intro_window::init()
 		player_->start();
 	}
 
-	start_t_ = last_fps_update_t_ = now();
+	start_t_ = now();
+	last_fps_update_t_ = 0;
 }
 
 void
@@ -124,11 +125,10 @@ intro_window::draw()
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	const float t = now();
+	const float t = now() - start_t_;
 
-	update_spectrum_bars(t - start_t_);
-
-	fx_->draw(t - start_t_);
+	update_spectrum_bars(t);
+	fx_->draw(t);
 
 	const int FRAMES_PER_FPS_UPDATE = 16;
 

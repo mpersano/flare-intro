@@ -1,6 +1,8 @@
 #pragma once
 
-int
+#include <stdint.h>
+
+uint32_t
 irand();
 
 float
