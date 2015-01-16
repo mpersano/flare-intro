@@ -7,5 +7,5 @@ uniform float thick;
 void main(void)
 {
 	float s = 1. - smoothstep(thick, thick + 1., edge_dist/world_z);
-	gl_FragColor = vec4((.1 + .9*s)*color, 1);
+	gl_FragColor = vec4((.2 + .8*s)*color, 1);
 }

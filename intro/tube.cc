@@ -18,7 +18,7 @@ const float FOV = 45;
 
 const float BALL_RADIUS = 50.;
 
-const int NUM_PARTICLES = 1600;
+const int NUM_PARTICLES = 900;
 
 sg::node_ptr
 make_portal_cell(float spectrum_offset)
@@ -118,10 +118,10 @@ make_portal_cell(float spectrum_offset)
 				va.add_vertex({{ p1.x, p1.y }, { 0 }});
 			}
 
-			float c = .25f + .75f*state;
+			float c = .1f + .9f*state*state;
 
 			program_->use();
-			program_->set_uniform_f("thick", 1.);
+			program_->set_uniform_f("thick", 2.);
 			program_->set_uniform_f("color", c, c, c);
 			va.draw(GL_TRIANGLES);
 		}
@@ -213,21 +213,31 @@ particle::draw(vertex_array& va, const glm::vec3& up, const glm::vec3& right, fl
 	va.add_vertex({{ p0.x, p0.y, p0.z }, { 0, 0 }});
 	va.add_vertex({{ p1.x, p1.y, p1.z }, { 1, 0 }});
 	va.add_vertex({{ p2.x, p2.y, p2.z }, { 1, 1 }});
+
+	va.add_vertex({{ p2.x, p2.y, p2.z }, { 1, 1 }});
 	va.add_vertex({{ p3.x, p3.y, p3.z }, { 0, 1 }});
+	va.add_vertex({{ p0.x, p0.y, p0.z }, { 0, 0 }});
 }
 
-camera_path::camera_path(const bezier& path, float ttl)
+camera_path::camera_path(const bezier& path, const glm::vec3& target, float ttl)
 : path_(path)
 , up_(glm::normalize(glm::cross(path_.p0 - path_.p1, path_.p2 - path_.p1)))
+, target_(target)
 , ttl_(ttl)
-{ }
+{
+	printf("( { { %.2f, %.2f, %.2f }, { %.2f, %.2f, %.2f }, { %.2f, %.2f, %.2f } }, { %.2f, %.2f, %.2f }\n",
+		path_.p0.x, path_.p0.y, path_.p0.z,
+		path_.p1.x, path_.p1.y, path_.p1.z,
+		path_.p2.x, path_.p2.y, path_.p2.z,
+		target.x, target.y, target.z);
+ }
 
 glm::mat4
 camera_path::get_mv(float t) const
 {
 	const float u = fmod(t, ttl_)/ttl_;
 	const glm::vec3 pos = path_.eval(u);
-	return glm::lookAt(pos, glm::vec3(0, 0, 0), up_);
+	return glm::lookAt(pos, target_, up_);
 }
 
 tube::tube()
@@ -239,6 +249,17 @@ tube::tube()
 
 	for (int i = 0; i < NUM_PARTICLES; i++)
 		particles_.push_back(particle(segs_));
+
+	camera_paths_.push_back(
+		{ { { -44.94, 4.98, 27.64 }, { -45.50, 5.01, 25.81 }, { -45.88, 6.36, 27.11 } }, { -45.24, 6.99, 30.49 }, 9.f });
+	camera_paths_.push_back(
+		{ { { -38.63, 24.88, -35.15 }, { -40.22, 26.10, -35.22 }, { -38.80, 26.81, -34.01 } }, { -35.71, 25.34, -33.29 }, 4.f });
+	camera_paths_.push_back(
+		{ { { -45.66, 47.60, -10.26 }, { -45.81, 46.88, -8.44 }, { -47.25, 48.06, -9.05 } }, { -47.75, 49.74, -12.08 }, 7.f });
+	camera_paths_.push_back(
+		{ { { -24.02, 29.10, -37.42 }, { -25.27, 27.87, -37.10 }, { -24.61, 29.31, -37.92 } }, { -22.40, 31.87, -38.82 }, 4.5f });
+	camera_paths_.push_back(
+		{ { { -19.06, 17.36, 47.81 }, { -20.29, 18.17, 46.85 }, { -19.29, 17.24, 47.96 } }, { -16.95, 15.57, 49.95 }, 4.5f });
 
 	particle_texture_.load(*render_particle_texture());
 
@@ -253,14 +274,6 @@ tube::tube()
 	particle_program_.attach_vertex_shader("data/shaders/vert-particle.glsl");
 	particle_program_.attach_fragment_shader("data/shaders/frag-particle.glsl");
 	particle_program_.link();
-
-	camera_paths_.push_back(
-		camera_path(
-			bezier(
-				glm::vec3(0, 0, -2.*BALL_RADIUS),
-				glm::vec3(2.*BALL_RADIUS, 0, -2.*BALL_RADIUS),
-				glm::vec3(2.*BALL_RADIUS, 0, 0)),
-			5.));
 }
 
 void
@@ -326,21 +339,30 @@ tube::gen_segment(const glm::vec3& p0, const glm::vec3& p1)
 void
 tube::draw(float t) const
 {
-#if 0
-#if 0
-	glm::mat4 mv = glm::translate(glm::vec3(0, 0, -200))*glm::rotate(.08f*t, glm::vec3(0, 1, 0));
-#else
-	const float SPEED = .125;
-	const auto& seg = segs_[static_cast<int>(SPEED*t)%segs_.size()];
-	float u = fmod(SPEED*t, 1.);
-#endif
+	float dt = t;
 
-	glm::mat4 mv = glm::inverse(matrix_on_seg(seg, u)*glm::translate(glm::vec3(0, .5, 0)));
-#else
-	glm::mat4 mv = camera_paths_[0].get_mv(t);
-#endif
+	auto it = camera_paths_.begin();
 
-	draw(mv, false, t);
+	while (it != camera_paths_.end() && dt > it->ttl_) {
+		dt -= it->ttl_;
+		++it;
+	}
+
+	glm::mat4 mv;
+
+	if (it != camera_paths_.end()) {
+		mv = it->get_mv(dt);
+
+		draw(mv, false, dt);
+	} else {
+		const float SPEED = .125;
+		const auto& seg = segs_[static_cast<int>(SPEED*t)%segs_.size()];
+		float u = fmod(SPEED*dt, 1.);
+
+		mv = glm::inverse(matrix_on_seg(seg, u)*glm::translate(glm::vec3(0, .25, 0)));
+
+		draw(mv, true, t);
+	}
 }
 
 void
@@ -376,13 +398,13 @@ tube::draw(const glm::mat4& mv, bool show_particles, float t) const
 		glm::vec3 up(mv[0][0], mv[1][0], mv[2][0]);
 		glm::vec3 right(mv[0][1], mv[1][1], mv[2][1]);
 
-		static particle::vertex_array va(4*NUM_PARTICLES);
+		static particle::vertex_array va(6*NUM_PARTICLES);
 
 		va.clear();
 
 		for (auto& p : particles_)
 			p.draw(va, up, right, t);
 
-		va.draw(GL_QUADS);
+		va.draw(GL_TRIANGLES);
 	}
 }

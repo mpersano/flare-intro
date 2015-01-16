@@ -30,12 +30,13 @@ struct particle
 
 struct camera_path
 {
-	camera_path(const bezier& path, float ttl);
+	camera_path(const bezier& path, const glm::vec3& target, float ttl);
 
 	glm::mat4 get_mv(float t) const;
 
 	bezier path_;
 	glm::vec3 up_;
+	glm::vec3 target_;
 	float ttl_;
 };
 
