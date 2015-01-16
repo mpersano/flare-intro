@@ -9,8 +9,8 @@
 class
 program_manager
 {
-	using dict_type = std::map<std::pair<std::string, std::string>, std::unique_ptr<ggl::program>>;
-	using dict_value_type = typename dict_type::value_type;
+	typedef std::map<std::pair<std::string, std::string>, std::unique_ptr<ggl::program>> dict_type;
+	typedef typename dict_type::value_type dict_value_type;
 
 public:
 	program_manager(const program_manager&) = delete;

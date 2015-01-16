@@ -1,3 +1,5 @@
+#include <cstdio>
+
 #include "program_manager.h"
 
 program_manager::program_manager()

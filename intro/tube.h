@@ -16,16 +16,16 @@
 
 struct particle
 {
-	using vertex_array = ggl::vertex_array<ggl::vertex_texcoord<GLfloat, 3, GLshort, 2>>;
+	typedef ggl::vertex_array<ggl::vertex_texcoord<GLfloat, 3, GLshort, 2>> vertex_array;
 
-	particle(const std::vector<bezier>& path);
+	particle(const std::vector<bezier> *path);
 
 	void draw(vertex_array& va, const glm::vec3& up, const glm::vec3& right, float t) const;
 
 	float speed_;
 	float pos_offset_;
 	glm::vec3 offset_;
-	const std::vector<bezier>& path_;
+	const std::vector<bezier> *path_;
 };
 
 struct camera_path

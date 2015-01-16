@@ -2,6 +2,7 @@
 #include <cmath>
 
 #include <GL/glew.h>
+#include <SDL.h>
 
 #include <memory>
 
@@ -28,9 +29,13 @@ namespace {
 float
 now()
 {
+#if 0
 	timespec tp;
 	clock_gettime(CLOCK_MONOTONIC, &tp);
 	return .001*(tp.tv_sec*1000 + tp.tv_nsec/1000000);
+#else
+	return .001*SDL_GetTicks();
+#endif
 }
 
 class intro_window : public ggl::window
@@ -130,6 +135,7 @@ intro_window::draw()
 	update_spectrum_bars(t);
 	fx_->draw(t);
 
+#if 0
 	const int FRAMES_PER_FPS_UPDATE = 16;
 
 	if (++frame_count_ == FRAMES_PER_FPS_UPDATE) {
@@ -137,6 +143,7 @@ intro_window::draw()
 		last_fps_update_t_ = t;
 		frame_count_ = 0;
 	}
+#endif
 }
 
 void

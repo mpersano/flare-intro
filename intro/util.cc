@@ -3,6 +3,10 @@
 
 #include "util.h"
 
+#ifndef UINT32_MAX
+#define UINT32_MAX 0xffffffff
+#endif
+
 namespace {
 
 // WELL512 random number generator by Chris Lomont

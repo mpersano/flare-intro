@@ -20,7 +20,7 @@ public:
 	virtual const bounding_box& get_bounding_box() const = 0;
 };
 
-using node_ptr = std::unique_ptr<node>;
+typedef std::unique_ptr<node> node_ptr;
 
 class group_node : public node
 {

@@ -1,4 +1,7 @@
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+if(WIN32)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -U__STRICT_ANSI__ -DGLEW_STATIC")
+endif()
 
 find_package(SDL REQUIRED)
 find_package(GLEW REQUIRED)

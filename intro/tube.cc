@@ -121,7 +121,7 @@ make_portal_cell(float spectrum_offset)
 			float c = .1f + .9f*state*state;
 
 			program_->use();
-			program_->set_uniform_f("thick", 2.);
+			program_->set_uniform_f("thick", 1.);
 			program_->set_uniform_f("color", c, c, c);
 			va.draw(GL_TRIANGLES);
 		}
@@ -186,7 +186,7 @@ matrix_on_seg(const bezier& seg, float u)
 
 } // namespace
 
-particle::particle(const std::vector<bezier>& path)
+particle::particle(const std::vector<bezier> *path)
 : speed_(frand(.15, .3)*((irand() & 1) ? -1 : 1))
 , pos_offset_(frand(0, 5000.))
 , offset_(frand(-.5, .5), frand(-.5, .5), frand(-.5, .5))
@@ -198,7 +198,7 @@ particle::draw(vertex_array& va, const glm::vec3& up, const glm::vec3& right, fl
 {
 	float pos = speed_*t + pos_offset_;
 
-	const auto& seg = path_[static_cast<int>(pos)%path_.size()];
+	const auto& seg = (*path_)[static_cast<int>(pos)%path_->size()];
 	float u = fmod(pos, 1.);
 
 	const glm::vec3 p = seg.eval(u) + offset_;
@@ -224,13 +224,7 @@ camera_path::camera_path(const bezier& path, const glm::vec3& target, float ttl)
 , up_(glm::normalize(glm::cross(path_.p0 - path_.p1, path_.p2 - path_.p1)))
 , target_(target)
 , ttl_(ttl)
-{
-	printf("( { { %.2f, %.2f, %.2f }, { %.2f, %.2f, %.2f }, { %.2f, %.2f, %.2f } }, { %.2f, %.2f, %.2f }\n",
-		path_.p0.x, path_.p0.y, path_.p0.z,
-		path_.p1.x, path_.p1.y, path_.p1.z,
-		path_.p2.x, path_.p2.y, path_.p2.z,
-		target.x, target.y, target.z);
- }
+{ }
 
 glm::mat4
 camera_path::get_mv(float t) const
@@ -248,7 +242,7 @@ tube::tube()
 	gen_path(glm::vec3(0, BALL_RADIUS, 0), glm::vec3(-.25*BALL_RADIUS, -BALL_RADIUS, 0), 6);
 
 	for (int i = 0; i < NUM_PARTICLES; i++)
-		particles_.push_back(particle(segs_));
+		particles_.push_back(particle(&segs_));
 
 	camera_paths_.push_back(
 		{ { { -44.94, 4.98, 27.64 }, { -45.50, 5.01, 25.81 }, { -45.88, 6.36, 27.11 } }, { -45.24, 6.99, 30.49 }, 9.f });
@@ -339,6 +333,7 @@ tube::gen_segment(const glm::vec3& p0, const glm::vec3& p1)
 void
 tube::draw(float t) const
 {
+#if 1
 	float dt = t;
 
 	auto it = camera_paths_.begin();
@@ -363,6 +358,9 @@ tube::draw(float t) const
 
 		draw(mv, true, t);
 	}
+#else
+	draw(glm::translate(glm::vec3(0, 0, -200)), false, 0);
+#endif
 }
 
 void

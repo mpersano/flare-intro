@@ -7,6 +7,12 @@
 # GLEW_LIBRARY
 # 
 
+IF (WIN32)
+	SET(GLEW_LIB glew32)
+ELSE (WIN32)
+	SET(GLEW_LIB glew)
+ENDIF (WIN32)
+
 FIND_PATH(GLEW_INCLUDE_DIR GL/glew.h
 	/usr/include
 	/usr/local/include
@@ -14,7 +20,7 @@ FIND_PATH(GLEW_INCLUDE_DIR GL/glew.h
 	/opt/local/include
 	DOC "The directory where GL/glew.h resides")
 FIND_LIBRARY(GLEW_LIBRARY
-	NAMES GLEW glew
+	NAMES GLEW ${GLEW_LIB}
 	PATHS
 	/usr/lib64
 	/usr/lib
