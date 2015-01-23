@@ -7,6 +7,16 @@
 #include <SDL.h>
 #include <GL/glew.h>
 
+namespace {
+
+float
+now()
+{
+	return .001*SDL_GetTicks();
+}
+
+}
+
 namespace ggl {
 
 window::window(int width, int height)
@@ -32,21 +42,17 @@ window::~window()
 }
 
 void
-window::do_redraw()
-{
-	draw();
-
-	if (dump_frames_)
-		dump_frame();
-
-	SDL_GL_SwapBuffers();
-}
-
-void
 window::run()
 {
+	float start_t_ = now();
+
 	for (;;) {
-		do_redraw();
+		draw(now() - start_t_);
+
+		if (dump_frames_)
+			dump_frame();
+
+		SDL_GL_SwapBuffers();
 
 		if (!poll_events())
 			break;

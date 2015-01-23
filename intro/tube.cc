@@ -4,6 +4,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "common.h"
+#include "spectrum.h"
 #include "program_manager.h"
 #include "util.h"
 #include "tube.h"

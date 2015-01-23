@@ -2,7 +2,6 @@
 #include <cmath>
 
 #include <GL/glew.h>
-#include <SDL.h>
 
 #include <memory>
 
@@ -22,21 +21,7 @@
 int g_viewport_width;
 int g_viewport_height;
 
-float g_spectrum_bars[NUM_SPECTRUM_BANDS];
-
 namespace {
-
-float
-now()
-{
-#if 0
-	timespec tp;
-	clock_gettime(CLOCK_MONOTONIC, &tp);
-	return .001*(tp.tv_sec*1000 + tp.tv_nsec/1000000);
-#else
-	return .001*SDL_GetTicks();
-#endif
-}
 
 class intro_window : public ggl::window
 {
@@ -45,7 +30,7 @@ public:
 	~intro_window();
 
 	void init();
-	void draw();
+	void draw(float t);
 
 private:
 	void init_openal();
@@ -58,7 +43,6 @@ private:
 
 	std::unique_ptr<ogg_player> player_;
 	std::unique_ptr<fx> fx_;
-	float start_t_;
 	int frame_count_;
 	float last_fps_update_t_;
 	bool mute_;
@@ -67,7 +51,6 @@ private:
 intro_window::intro_window(bool mute)
 : ggl::window(g_viewport_width, g_viewport_height)
 , fx_(new tube)
-, start_t_(now())
 , frame_count_(0)
 , mute_(mute)
 {
@@ -116,12 +99,11 @@ intro_window::init()
 		player_->start();
 	}
 
-	start_t_ = now();
 	last_fps_update_t_ = 0;
 }
 
 void
-intro_window::draw()
+intro_window::draw(float t)
 {
 	if (player_)
 		player_->update();
@@ -129,8 +111,6 @@ intro_window::draw()
 	glViewport(0, 0, g_viewport_width, g_viewport_height);
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT);
-
-	const float t = now() - start_t_;
 
 	update_spectrum_bars(t);
 	fx_->draw(t);
@@ -149,22 +129,7 @@ intro_window::draw()
 void
 intro_window::update_spectrum_bars(float t) const
 {
-	spectrum s(*player_, static_cast<unsigned>(t*1000.));
-
-	const int num_samples = spectrum::WINDOW_SIZE/8;
-	const int samples_per_band = num_samples/NUM_SPECTRUM_BANDS;
-
-	for (int i = 0; i < NUM_SPECTRUM_BANDS; i++) {
-		float w = 0;
-
-		for (int j = 0; j < samples_per_band; j++)
-			w += s.spectrum_window[i*samples_per_band + j];
-
-		w /= samples_per_band;
-		w = sqrtf(w);
-
-		g_spectrum_bars[i] = w;
-	}
+	::update_spectrum_bars(*player_, static_cast<unsigned>(t*1000.));
 
 	// draw bars
 
@@ -179,7 +144,28 @@ intro_window::update_spectrum_bars(float t) const
 	glLoadIdentity();
 
 	glTranslatef(20, 20, 0);
-	s.draw_bars(30, 400, 100);
+
+	const float scale = 400;
+
+	const int width = 400;
+	const int dx = width/NUM_SPECTRUM_BANDS;
+
+	int x = 0;
+
+	glBegin(GL_QUADS);
+
+	for (int i = 0; i < NUM_SPECTRUM_BANDS; i++) {
+		float w = g_spectrum_bars[i]*scale;
+
+		glVertex2f(x, 0);
+		glVertex2f(x, w);
+		glVertex2f(x + dx - 1, w);
+		glVertex2f(x + dx - 1, 0);
+
+		x += dx;
+	}
+
+	glEnd();
 }
 
 } // namespace

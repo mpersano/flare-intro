@@ -2,16 +2,8 @@
 
 #include "ogg_player.h"
 
-struct spectrum
-{
-	spectrum(const ogg_player& player, unsigned cur_ms);
+static const int NUM_SPECTRUM_BANDS = 30;
+extern float g_spectrum_bars[NUM_SPECTRUM_BANDS];
 
-	void draw_bars(int num_bands, int width, int height) const;
-
-	enum {
-		WINDOW_SIZE = 4096,
-		LOG2_WINDOW_SIZE = 12,
-	};
-
-	float spectrum_window[WINDOW_SIZE/2];
-};
+void
+update_spectrum_bars(const ogg_player& player, unsigned cur_ms);

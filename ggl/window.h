@@ -14,13 +14,12 @@ public:
 
 	void run();
 
-	virtual void draw() = 0;
+	virtual void draw(float t) = 0;
 	virtual void on_mouse_button_down(int button, int x, int y) { }
 	virtual void on_mouse_button_up(int button) { }
 	virtual void on_mouse_motion(int x, int y) { }
 
 private:
-	void do_redraw();
 	bool poll_events();
 	void dump_frame();
 

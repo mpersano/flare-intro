@@ -1,12 +1,18 @@
 #include <cmath>
 #include <cstring>
 
-#include <GL/glew.h>
-
 #include "fft.h"
 #include "spectrum.h"
 
-spectrum::spectrum(const ogg_player& player, unsigned cur_ms)
+float g_spectrum_bars[NUM_SPECTRUM_BANDS];
+
+enum {
+	WINDOW_SIZE = 4096,
+	LOG2_WINDOW_SIZE = 12,
+};
+
+void
+update_spectrum_bars(const ogg_player& player, unsigned cur_ms)
 {
 	static float sample_window[WINDOW_SIZE];
 
@@ -50,43 +56,22 @@ spectrum::spectrum(const ogg_player& player, unsigned cur_ms)
 
 	fft(1, LOG2_WINDOW_SIZE, real, imag);
 
-	for (int i = 0; i < WINDOW_SIZE/2; i++)
-		spectrum_window[i] = sqrtf(real[i]*real[i] + imag[i]*imag[i]);
-}
-
-void
-spectrum::draw_bars(int num_bands, int width, int height) const
-{
 	const int num_samples = WINDOW_SIZE/8;
-	const int samples_per_band = num_samples/num_bands;
-	const int dx = width/num_bands;
+	const int samples_per_band = num_samples/NUM_SPECTRUM_BANDS;
 
-	const float scale = 4.*height;
-
-	glBegin(GL_QUADS);
-
-	int x = 0;
-
-	for (int i = 0; i < num_bands; i++) {
+	for (int i = 0; i < NUM_SPECTRUM_BANDS; i++) {
 		float w = 0;
 
-		for (int j = 0; j < samples_per_band; j++)
-			w += spectrum_window[i*samples_per_band + j];
+		int index = i*samples_per_band;
+
+		for (int j = 0; j < samples_per_band; j++) {
+			w += sqrtf(real[index]*real[index] + imag[index]*imag[index]);
+			++index;
+		}
 
 		w /= samples_per_band;
+		w = sqrtf(w);
 
-		w = sqrtf(w)*scale;
-
-		if (w > height)
-			w = height;
-
-		glVertex2f(x, 0);
-		glVertex2f(x, w);
-		glVertex2f(x + dx - 1, w);
-		glVertex2f(x + dx - 1, 0);
-
-		x += dx;
+		g_spectrum_bars[i] = w;
 	}
-
-	glEnd();
 }
