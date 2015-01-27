@@ -12,10 +12,12 @@
 #include <AL/al.h>
 
 #include "common.h"
+#include "program_manager.h"
 #include "spectrum.h"
 #include "ogg_player.h"
 #include "fx.h"
 #include "tube.h"
+#include "text.h"
 #include "util.h"
 
 int g_viewport_width;
@@ -42,7 +44,7 @@ private:
 	ALCcontext *al_context_;
 
 	std::unique_ptr<ogg_player> player_;
-	std::unique_ptr<fx> fx_;
+	std::unique_ptr<fx> tube_, text_;
 	int frame_count_;
 	float last_fps_update_t_;
 	bool mute_;
@@ -50,7 +52,8 @@ private:
 
 intro_window::intro_window(bool mute)
 : ggl::window(g_viewport_width, g_viewport_height)
-, fx_(new tube)
+, tube_(new tube)
+, text_(new text)
 , frame_count_(0)
 , mute_(mute)
 {
@@ -113,7 +116,9 @@ intro_window::draw(float t)
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	update_spectrum_bars(t);
-	fx_->draw(t);
+
+	tube_->draw(t);
+	text_->draw(t);
 
 #if 0
 	const int FRAMES_PER_FPS_UPDATE = 16;
@@ -133,8 +138,7 @@ intro_window::update_spectrum_bars(float t) const
 
 	// draw bars
 
-	glDisable(GL_TEXTURE_2D);
-	glUseProgram(0);
+	get_program(program_manager::White)->use();
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();

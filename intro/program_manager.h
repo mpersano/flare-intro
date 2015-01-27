@@ -10,8 +10,10 @@ program_manager
 public:
 	enum program_id
 	{
+		White,
 		Decal,
 		PortalWireframe,
+		TextBlur,
 		NumPrograms,
 	};
 

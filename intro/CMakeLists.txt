@@ -33,6 +33,7 @@ set(INTRO_SOURCES
 	scene.cc
 	bezier.cc
 	tube.cc
+	text.cc
 	main.cc
 	particle_texture.cc)
 
