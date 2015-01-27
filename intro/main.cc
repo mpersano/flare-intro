@@ -115,7 +115,8 @@ intro_window::draw(float t)
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	update_spectrum_bars(t);
+	if (player_)
+		update_spectrum_bars(t);
 
 	tube_->draw(t);
 	text_->draw(t);

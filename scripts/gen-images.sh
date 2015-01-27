@@ -2,48 +2,28 @@
 
 FONT=./DejaVuSansMono.ttf
 
-SMALL_SIZE=96x32
 SMALL_POINTSIZE=22
-
-MEDIUM_SIZE=256x64
 MEDIUM_POINTSIZE=48
+LARGE_POINTSIZE=64
 
-convert \
-	-background black \
-	-fill white \
-	-font ${FONT} \
-	-size ${SMALL_SIZE} \
-	-pointsize ${SMALL_POINTSIZE} \
-	-gravity center \
-	label:"code" \
-	1.png
+gen_image()
+{
+	convert \
+		-background black \
+		-fill white \
+		-font ${FONT} \
+		-size $1 \
+		-pointsize $2 \
+		-gravity center \
+		label:$3 \
+		$4
+}
 
-convert \
-	-background black \
-	-fill white \
-	-font ${FONT} \
-	-size 192x64 \
-	-pointsize ${MEDIUM_POINTSIZE} \
-	-gravity center \
-	label:"fuse" \
-	2.png
+for i in 0 1 2 5; do
+	gen_image 64x96 ${LARGE_POINTSIZE} $i $i.png
+done
 
-convert \
-	-background black \
-	-fill white \
-	-font ${FONT} \
-	-size ${SMALL_SIZE} \
-	-pointsize ${SMALL_POINTSIZE} \
-	-gravity center \
-	label:"music" \
-	3.png
-
-convert \
-	-background black \
-	-fill white \
-	-font ${FONT} \
-	-size 320x64 \
-	-pointsize ${MEDIUM_POINTSIZE} \
-	-gravity center \
-	label:"e:mortal" \
-	4.png
+gen_image 96x32 ${SMALL_POINTSIZE} "code" code.png
+gen_image 192x64 ${MEDIUM_POINTSIZE} "fuse" fuse.png
+gen_image 96x32 ${SMALL_POINTSIZE} "music" music.png
+gen_image 320x64 ${MEDIUM_POINTSIZE} "e:mortal" emortal.png

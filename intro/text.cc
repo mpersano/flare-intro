@@ -4,6 +4,7 @@
 #include <ggl/pixmap.h>
 
 #include "common.h"
+#include "util.h"
 #include "program_manager.h"
 #include "text.h"
 
@@ -14,10 +15,9 @@ const float FADE_OUT_DURATION = 1;
 
 }
 
-text::label::label(const char *source, int x, int y, float start_t, float duration, const twitch_vector& twitches)
+text::label::label(const char *source, int x, int y, float start_t, float duration)
 : start_t_(start_t)
 , duration_(duration)
-, twitches_(twitches)
 {
 	texture_.load(*ggl::pixmap::load_from_png(source));
 
@@ -39,6 +39,10 @@ text::label::label(const char *source, int x, int y, float start_t, float durati
 	va_.add_vertex({ { x + w, y }, { du, dv } });
 	va_.add_vertex({ { x, y + h }, { 0, 0 } });
 	va_.add_vertex({ { x + w, y + h }, { du, 0 } });
+
+	int num_twitches = 3 + irand()%7;
+	for (int i = 0; i < num_twitches; i++)
+		twitches_.push_back(std::make_pair<float, float>(frand(0, duration_), frand(.05, .6)));
 }
 
 void
@@ -88,16 +92,15 @@ text::text()
 		const char *source;
 		int x, y;
 		float start_t, duration;
-		twitch_vector twitches;
 	} label_defs[] = {
-		{ "data/images/1.png", 20, 70, 1, 4, { { .75, .1 }, { 1.2, .2 } } },
-		{ "data/images/2.png", 20, 20, 2, 3, { { .75, .1 }, { 1.75, .5 } } },
-		{ "data/images/3.png", 20, 70, 4, 4, { { .75, .1 } } },
-		{ "data/images/4.png", 20, 20, 5, 3, { { .75, .1 }, { 1.75, .5 } } },
+		{ "data/images/code.png", 20, 70, 1, 4 },
+		{ "data/images/fuse.png", 20, 20, 2, 3 },
+		{ "data/images/music.png", 20, 70, 4, 4 },
+		{ "data/images/emortal.png", 20, 20, 5, 3 },
 	};
 
 	for (const auto& p : label_defs)
-		labels_.push_back(std::unique_ptr<label>(new label(p.source, p.x, p.y, p.start_t, p.duration, p.twitches)));
+		labels_.push_back(std::unique_ptr<label>(new label(p.source, p.x, p.y, p.start_t, p.duration)));
 }
 
 void
