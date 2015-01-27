@@ -36,7 +36,7 @@ text::label::draw(float t) const
 {
 	texture_.bind();
 
-	const ggl::program *prog = get_program(program_manager::TextBlur);
+	const ggl::program *prog = get_program(PROG_TEXTBLUR);
 
 	prog->use();
 

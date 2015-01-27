@@ -1,7 +1,5 @@
 #include <cstdio>
 
-#include <limits.h>
-
 #include "program_manager.h"
 
 namespace {
@@ -14,7 +12,18 @@ get_shader_path(const char *basename)
 	return str;
 }
 
-}
+struct program_manager
+{
+	program_manager();
+
+	program_manager(const program_manager&) = delete;
+	program_manager& operator=(const program_manager&) = delete;
+
+	const ggl::program *get(program_id id)
+	{ return programs_[id].get(); }
+
+	std::unique_ptr<ggl::program> programs_[NUM_PROGRAMS];
+};
 
 program_manager::program_manager()
 {
@@ -28,7 +37,7 @@ program_manager::program_manager()
 		{ "vert-decal.glsl", "frag-textblur.glsl" }
 	};
 
-	for (int i = 0; i < NumPrograms; i++) {
+	for (int i = 0; i < NUM_PROGRAMS; i++) {
 		const auto& p = program_sources[i];
 
 		printf("loading %s,%s\n",
@@ -45,15 +54,11 @@ program_manager::program_manager()
 	}
 }
 
-program_manager &
-program_manager::get_instance()
-{
-	static program_manager pm;
-	return pm;
 }
 
 const ggl::program *
-program_manager::get(program_id id)
+get_program(program_id id)
 {
-	return programs_[id].get();
+	static program_manager pm;
+	return pm.get(id);
 }

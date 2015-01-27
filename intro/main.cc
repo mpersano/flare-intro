@@ -138,7 +138,7 @@ intro_window::update_spectrum_bars(float t) const
 
 	// draw bars
 
-	get_program(program_manager::White)->use();
+	get_program(PROG_WHITE)->use();
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();

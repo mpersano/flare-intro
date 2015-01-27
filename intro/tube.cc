@@ -28,7 +28,7 @@ make_portal_cell(float spectrum_offset)
 	{
 		cell_node(float spectrum_offset)
 		: spectrum_offset_(spectrum_offset)
-		, program_(get_program(program_manager::PortalWireframe))
+		, program_(get_program(PROG_PORTALWIREFRAME))
 		{
 			const float da = 2.*M_PI/NUM_SIDES;
 			float a = 0;
@@ -386,7 +386,7 @@ tube::draw(const glm::mat4& mv, bool show_particles, float t) const
 	if (show_particles) {
 		particle_texture_.bind();
 
-		get_program(program_manager::Decal)->use();
+		get_program(PROG_DECAL)->use();
 
 		glLoadMatrixf(glm::value_ptr(mv));
 
