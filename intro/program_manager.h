@@ -1,7 +1,5 @@
 #pragma once
 
-#include <map>
-#include <string>
 #include <memory>
 
 #include <ggl/program.h>
@@ -9,19 +7,29 @@
 class
 program_manager
 {
-	typedef std::map<std::pair<std::string, std::string>, std::unique_ptr<ggl::program>> dict_type;
-	typedef typename dict_type::value_type dict_value_type;
-
 public:
+	enum program_id
+	{
+		Decal,
+		PortalWireframe,
+		NumPrograms,
+	};
+
 	program_manager(const program_manager&) = delete;
 	program_manager& operator=(const program_manager&) = delete;
 
 	static program_manager& get_instance();
 
-	const ggl::program *get(const std::string& vert_shader, const std::string& frag_shader);
+	const ggl::program *get(program_id id);
 
 private:
 	program_manager();
 
-	dict_type program_dict_;
+	std::unique_ptr<ggl::program> programs_[NumPrograms];
 };
+
+inline const ggl::program *
+get_program(program_manager::program_id id)
+{
+	return program_manager::get_instance().get(id);
+}

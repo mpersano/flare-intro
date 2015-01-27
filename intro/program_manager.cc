@@ -1,9 +1,47 @@
 #include <cstdio>
 
+#include <limits.h>
+
 #include "program_manager.h"
 
+namespace {
+
+std::string
+get_shader_path(const char *basename)
+{
+	std::string str("data/shaders/");
+	str.append(basename);
+	return str;
+}
+
+}
+
 program_manager::program_manager()
-{ }
+{
+	struct {
+		const char *vertex_shader;
+		const char *frag_shader;
+	} program_sources[] = {
+		{ "vert-decal.glsl", "frag-decal.glsl" },
+		{ "vert-wiretri.glsl", "frag-wiretri.glsl" }
+	};
+
+	for (int i = 0; i < NumPrograms; i++) {
+		const auto& p = program_sources[i];
+
+		printf("loading %s,%s\n",
+			get_shader_path(p.vertex_shader).c_str(),
+			get_shader_path(p.frag_shader).c_str());
+
+		std::unique_ptr<ggl::program> ptr(new ggl::program);
+
+		ptr->attach_vertex_shader(get_shader_path(p.vertex_shader).c_str());
+		ptr->attach_fragment_shader(get_shader_path(p.frag_shader).c_str());
+		ptr->link();
+
+		programs_[i] = std::move(ptr);
+	}
+}
 
 program_manager &
 program_manager::get_instance()
@@ -13,23 +51,7 @@ program_manager::get_instance()
 }
 
 const ggl::program *
-program_manager::get(const std::string& vert_shader, const std::string& frag_shader)
+program_manager::get(program_id id)
 {
-	auto key = std::make_pair(vert_shader, frag_shader);
-
-	auto it = program_dict_.find(key);
-
-	if (it == program_dict_.end()) {
-		printf("loading %s,%s\n", vert_shader.c_str(), frag_shader.c_str());
-
-		std::unique_ptr<ggl::program> program(new ggl::program);
-
-		program->attach_vertex_shader(vert_shader.c_str());
-		program->attach_fragment_shader(frag_shader.c_str());
-		program->link();
-
-		it = program_dict_.insert(it, dict_value_type(key, std::move(program)));
-	}
-
-	return it->second.get();
+	return programs_[id].get();
 }

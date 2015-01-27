@@ -28,7 +28,7 @@ make_portal_cell(float spectrum_offset)
 	{
 		cell_node(float spectrum_offset)
 		: spectrum_offset_(spectrum_offset)
-		, program_(program_manager::get_instance().get("data/shaders/vert-wiretri.glsl", "data/shaders/frag-wiretri.glsl"))
+		, program_(get_program(program_manager::PortalWireframe))
 		{
 			const float da = 2.*M_PI/NUM_SIDES;
 			float a = 0;
@@ -265,10 +265,6 @@ tube::tube()
 	particle_texture_.set_min_filter(GL_LINEAR);
 
 	particle_texture_.set_env_mode(GL_MODULATE);
-
-	particle_program_.attach_vertex_shader("data/shaders/vert-particle.glsl");
-	particle_program_.attach_fragment_shader("data/shaders/frag-particle.glsl");
-	particle_program_.link();
 }
 
 void
@@ -390,7 +386,7 @@ tube::draw(const glm::mat4& mv, bool show_particles, float t) const
 	if (show_particles) {
 		particle_texture_.bind();
 
-		particle_program_.use();
+		get_program(program_manager::Decal)->use();
 
 		glLoadMatrixf(glm::value_ptr(mv));
 

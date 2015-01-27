@@ -59,5 +59,5 @@ private:
 	std::vector<camera_path> camera_paths_;
 
 	ggl::texture particle_texture_;
-	ggl::program particle_program_;
+	const ggl::program *particle_program_;
 };
