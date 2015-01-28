@@ -31,6 +31,8 @@ shader::set_source(const char *source) const
 void
 shader::load_source(const char *path) const
 {
+	fprintf(stderr, "loading %s...\n", path);
+
 	file in_file(path, "rb");
 	if (!in_file)
 		panic("failed to open %s: %s\n", path, strerror(errno));

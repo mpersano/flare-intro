@@ -28,7 +28,7 @@ namespace {
 class intro_window : public ggl::window
 {
 public:
-	intro_window(bool mute = false);
+	intro_window(bool mute = false, bool fullscreen = false);
 	~intro_window();
 
 	void init();
@@ -50,8 +50,8 @@ private:
 	bool mute_;
 };
 
-intro_window::intro_window(bool mute)
-: ggl::window(g_viewport_width, g_viewport_height)
+intro_window::intro_window(bool mute, bool fullscreen)
+: ggl::window(g_viewport_width, g_viewport_height, fullscreen)
 , tube_(new tube)
 , text_(new text)
 , frame_count_(0)
@@ -179,16 +179,21 @@ int
 main(int argc, char *argv[])
 {
 	bool mute = false;
+	bool fullscreen = false;
 
 	g_viewport_width = 512;
 	g_viewport_height = 256;
 
 	int c;
 
-	while ((c = getopt(argc, argv, "mw:h:")) != EOF) {
+	while ((c = getopt(argc, argv, "mfw:h:")) != EOF) {
 		switch (c) {
 			case 'm':
 				mute = true;
+				break;
+
+			case 'f':
+				fullscreen = true;
 				break;
 
 			case 'w':
@@ -201,7 +206,7 @@ main(int argc, char *argv[])
 		}
 	}
 
-	intro_window intro(mute);
+	intro_window intro(mute, fullscreen);
 	intro.init();
 	intro.run();
 }

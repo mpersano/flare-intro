@@ -40,10 +40,6 @@ program_manager::program_manager()
 	for (int i = 0; i < NUM_PROGRAMS; i++) {
 		const auto& p = program_sources[i];
 
-		printf("loading %s,%s\n",
-			get_shader_path(p.vertex_shader).c_str(),
-			get_shader_path(p.frag_shader).c_str());
-
 		std::unique_ptr<ggl::program> ptr(new ggl::program);
 
 		ptr->attach_vertex_shader(get_shader_path(p.vertex_shader).c_str());

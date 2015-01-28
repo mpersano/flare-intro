@@ -19,7 +19,7 @@ now()
 
 namespace ggl {
 
-window::window(int width, int height)
+window::window(int width, int height, bool fullscreen)
 : width_(width)
 , height_(height)
 , dump_frames_(false)
@@ -29,7 +29,12 @@ window::window(int width, int height)
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		panic("SDL_Init: %s", SDL_GetError());
 
-	if (SDL_SetVideoMode(width, height, 0, SDL_OPENGL) == 0)
+	Uint32 flags = SDL_OPENGL;
+
+	if (fullscreen)
+		flags |= SDL_FULLSCREEN;
+
+	if (SDL_SetVideoMode(width, height, 0, flags) == 0)
 		panic("SDL_SetVideoMode: %s", SDL_GetError());
 
 	if (GLenum rv = glewInit())
@@ -68,6 +73,9 @@ window::poll_events()
 		switch (event.type) {
 			case SDL_QUIT:
 				return false;
+
+			case SDL_KEYDOWN:
+				return event.key.keysym.sym != SDLK_ESCAPE;
 
 			case SDL_MOUSEBUTTONDOWN:
 				on_mouse_button_down(event.button.button, event.button.x, event.button.y);

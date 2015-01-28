@@ -112,6 +112,8 @@ to_pixel_type(png_byte png_color_type)
 std::unique_ptr<pixmap>
 pixmap::load_from_png(const char *path)
 {
+	fprintf(stderr, "loading %s...\n", path);
+
 	file in_file(path, "rb");
 	if (!in_file)
 		panic("failed to open %s: %s", path, strerror(errno));
