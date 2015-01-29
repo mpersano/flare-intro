@@ -45,7 +45,7 @@ class tube : public fx
 public:
 	tube();
 
-	void draw(float t) const;
+	void draw(float t);
 
 private:
 	void draw(const glm::mat4& mv, bool show_particles, float t) const;

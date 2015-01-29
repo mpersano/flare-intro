@@ -11,7 +11,7 @@ class text : public fx
 public:
 	text();
 
-	void draw(float t) const;
+	void draw(float t);
 
 private:
 	typedef std::vector<std::pair<float, float>> twitch_vector;

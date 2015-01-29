@@ -104,7 +104,7 @@ text::text()
 }
 
 void
-text::draw(float t) const
+text::draw(float t)
 {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();

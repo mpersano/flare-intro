@@ -328,9 +328,8 @@ tube::gen_segment(const glm::vec3& p0, const glm::vec3& p1)
 }
 
 void
-tube::draw(float t) const
+tube::draw(float t)
 {
-#if 1
 	float dt = t;
 
 	auto it = camera_paths_.begin();
@@ -355,9 +354,6 @@ tube::draw(float t) const
 
 		draw(mv, true, t);
 	}
-#else
-	draw(glm::translate(glm::vec3(0, 0, -200)), false, 0);
-#endif
 }
 
 void

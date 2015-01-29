@@ -34,6 +34,7 @@ set(INTRO_SOURCES
 	bezier.cc
 	tube.cc
 	text.cc
+	boids.cc
 	main.cc
 	particle_texture.cc)
 
