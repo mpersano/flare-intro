@@ -7,6 +7,7 @@
 
 #include "common.h"
 #include "util.h"
+#include "quadtree.h"
 #include "boids.h"
 
 namespace {
@@ -15,8 +16,8 @@ const float Z_NEAR = .1;
 const float Z_FAR = 1000.;
 const float FOV = 45;
 
-const float SPEED = 20.;
-const float ANG_SPEED = .25;
+const float SPEED = 50.;
+const float ANG_SPEED = .5;
 
 float
 sign(float x)
@@ -82,13 +83,24 @@ boid::draw() const
 }
 
 boids::boids()
-: prev_t_(0)
-{ }
+: terrain_root_(make_quadtree_node(glm::vec2(-100, -100), glm::vec2(100, 100)))
+, prev_t_(0)
+{
+	for (int i = 0; i < 19; i++) {
+		for (int j = 0; j < 19; j++) {
+			float x = -95 + 10*i;
+			float y = -95 + 10*j + ((i & 1) ? 5 : 0);
+			terrain_root_->insert(frob(glm::vec2(x, y), frand(5, 50), 5));
+		}
+	}
+}
 
 void
 boids::draw(float t)
 {
-	glm::vec3 target(200.*sinf(.3f*t), 0, 0);
+	// update boids
+
+	glm::vec3 target(200.*sinf(1.2f*t), 0, 0);
 
 	const float dt = t - prev_t_;
 
@@ -104,11 +116,12 @@ boids::draw(float t)
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	glTranslatef(0, 0, -300);
-	glRotatef(t*20., 1, 0, 0);
-
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE);
+
+#if 0
+	glTranslatef(0, 0, -300);
+	// glRotatef(t*30., 1, 0, 0);
 
 	glPushMatrix();
 	glTranslatef(target.x, target.y, target.z);
@@ -122,4 +135,14 @@ boids::draw(float t)
 		boid.draw();
 
 	prev_t_ = t;
+#else
+	const frustum f(FOV, aspect, Z_NEAR, Z_FAR);
+
+	glm::vec3 eye = (glm::rotate(.1f*t, glm::vec3(0, 1, 0))*glm::vec4(0, 100, -100, 1)).xyz();
+	glm::mat4 mv = glm::lookAt(eye, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+
+	terrain_root_->draw(mv, f);
+
+	// terrain_root_->draw(glm::lookAt(glm::vec3(0, 100, 10), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)), f);
+#endif
 }

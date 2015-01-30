@@ -35,6 +35,7 @@ set(INTRO_SOURCES
 	tube.cc
 	text.cc
 	boids.cc
+	quadtree.cc
 	main.cc
 	particle_texture.cc)
 

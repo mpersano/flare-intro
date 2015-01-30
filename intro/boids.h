@@ -1,9 +1,13 @@
 #pragma once
 
+#include <memory>
+
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 
 #include "fx.h"
+
+class quadtree_node;
 
 struct boid
 {
@@ -26,7 +30,8 @@ public:
 	void draw(float t);
 
 private:
-	static const int NUM_BOIDS = 32;
+	static const int NUM_BOIDS = 128;
 	boid boids_[NUM_BOIDS];
+	std::unique_ptr<quadtree_node> terrain_root_;
 	float prev_t_;
 };
