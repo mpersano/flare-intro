@@ -16,6 +16,9 @@ public:
 	{ }
 
 	bounding_box& operator+=(const glm::vec3& v);
+	bounding_box& operator+=(const bounding_box& box); 
+
+	void draw() const;
 
 	glm::vec3 min, max;
 

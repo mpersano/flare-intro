@@ -83,15 +83,29 @@ boid::draw() const
 }
 
 boids::boids()
-: terrain_root_(make_quadtree_node(glm::vec2(-100, -100), glm::vec2(100, 100)))
-, prev_t_(0)
+: prev_t_(0)
 {
-	for (int i = 0; i < 19; i++) {
-		for (int j = 0; j < 19; j++) {
-			float x = -95 + 10*i;
-			float y = -95 + 10*j + ((i & 1) ? 5 : 0);
-			terrain_root_->insert(frob(glm::vec2(x, y), frand(5, 50), 5));
+	const float TERRAIN_SIZE = 1000;
+	const int COLUMN_ROWS = 40;
+	const float COLUMN_RADIUS = .95f*.5f*TERRAIN_SIZE/COLUMN_ROWS;
+
+	const float min = -.5f*TERRAIN_SIZE - COLUMN_RADIUS;
+	const float max = .5f*TERRAIN_SIZE + COLUMN_RADIUS;
+
+	terrain_root_ = make_quadtree_node(glm::vec2(min, min), glm::vec2(max, max));
+
+	float y = -.5f*TERRAIN_SIZE + COLUMN_RADIUS;
+
+	for (int i = 0; i < COLUMN_ROWS; i++) {
+		float x = -.5f*TERRAIN_SIZE + COLUMN_RADIUS;
+
+		for (int j = 0; j < COLUMN_ROWS; j++) {
+			const glm::vec2 center(x, y + ((j & 1) ? COLUMN_RADIUS : 0));
+			terrain_root_->insert(frob(center, frand(5, 100), COLUMN_RADIUS));
+			x += 2*COLUMN_RADIUS;
 		}
+
+		y += 2*COLUMN_RADIUS;
 	}
 }
 
@@ -137,12 +151,16 @@ boids::draw(float t)
 	prev_t_ = t;
 #else
 	const frustum f(FOV, aspect, Z_NEAR, Z_FAR);
+	extern int leaves_drawn;
 
-	glm::vec3 eye = (glm::rotate(.1f*t, glm::vec3(0, 1, 0))*glm::vec4(0, 100, -100, 1)).xyz();
+	glm::vec3 eye = (glm::rotate(.1f*t, glm::vec3(0, 1, 0))*glm::vec4(0, 500 + 400*sinf(.5f*t), -100, 1)).xyz();
+
 	glm::mat4 mv = glm::lookAt(eye, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+
+	leaves_drawn = 0;
 
 	terrain_root_->draw(mv, f);
 
-	// terrain_root_->draw(glm::lookAt(glm::vec3(0, 100, 10), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)), f);
+	// printf("%d\n", leaves_drawn);
 #endif
 }

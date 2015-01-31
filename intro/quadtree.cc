@@ -6,11 +6,12 @@
 
 #include "quadtree.h"
 
+int leaves_drawn;
+
 namespace {
 
 struct quadtree_leaf : quadtree_node
 {
-public:
 	quadtree_leaf(const glm::vec2& min, const glm::vec2& max)
 	: quadtree_node(min, max)
 	{ }
@@ -18,13 +19,11 @@ public:
 	void draw(const glm::mat4& mv, const frustum& f) const;
 	void insert(const frob& f);
 
-private:
 	std::vector<frob> frobs_;
 };
 
 struct quadtree_inner : quadtree_node
 {
-public:
 	quadtree_inner(const glm::vec2& min, const glm::vec2& max)
 	: quadtree_node(min, max)
 	{ }
@@ -32,19 +31,22 @@ public:
 	void draw(const glm::mat4& mv, const frustum& f) const;
 	void insert(const frob& f);
 
-private:
 	std::unique_ptr<quadtree_node> children_[4];
 };
 
 void
 quadtree_leaf::draw(const glm::mat4& mv, const frustum& f) const
 {
-	// XXX; check frustum
+	if (f.intersects(mv, box_)) {
+		++leaves_drawn;
 
-	glLoadMatrixf(glm::value_ptr(mv));
+		glLoadMatrixf(glm::value_ptr(mv));
+		// box_.draw();
 
-	for (const auto& f : frobs_)
-		f.draw();
+		glColor4f(1, 1, 1, 1);
+		for (const auto& f : frobs_)
+			f.draw();
+	}
 }
 
 void
@@ -54,14 +56,22 @@ quadtree_leaf::insert(const frob& f)
 	assert(f.center_.y >= min_.y && f.center_.y < max_.y);
 
 	frobs_.push_back(f);
+
+	box_ += glm::vec3(f.center_.x - f.radius_, 0, f.center_.y - f.radius_);
+	box_ += glm::vec3(f.center_.x + f.radius_, f.height_, f.center_.y + f.radius_);
 }
 
 void
 quadtree_inner::draw(const glm::mat4& mv, const frustum& f) const
 {
-	for (const auto& child : children_) {
-		if (child)
-			child->draw(mv, f);
+	if (f.intersects(mv, box_)) {
+		// glLoadMatrixf(glm::value_ptr(mv));
+		// box_.draw();
+
+		for (const auto& child : children_) {
+			if (child)
+				child->draw(mv, f);
+		}
 	}
 }
 
@@ -80,12 +90,14 @@ quadtree_inner::insert(const frob& f)
 				children_[0] = make_quadtree_node(min_, mid);
 
 			children_[0]->insert(f);
+			box_ += children_[0]->box_;
 		} else {
 			// insert into 1
 			if (!children_[1])
 				children_[1] = make_quadtree_node(glm::vec2(min_.x, mid.y), glm::vec2(mid.x, max_.y));
 
 			children_[1]->insert(f);
+			box_ += children_[1]->box_;
 		}
 	} else {
 		if (f.center_.y < mid.y) {
@@ -94,12 +106,15 @@ quadtree_inner::insert(const frob& f)
 				children_[2] = make_quadtree_node(glm::vec2(mid.x, min_.y), glm::vec2(max_.x, mid.y));
 
 			children_[2]->insert(f);
+
+			box_ += children_[2]->box_;
 		} else {
 			// insert into 3
 			if (!children_[3])
 				children_[3] = make_quadtree_node(mid, max_);
 
 			children_[3]->insert(f);
+			box_ += children_[3]->box_;
 		}
 	}
 }
@@ -109,7 +124,7 @@ quadtree_inner::insert(const frob& f)
 std::unique_ptr<quadtree_node>
 make_quadtree_node(const glm::vec2& min, const glm::vec2& max)
 {
-	const float MIN_SIZE = 10.;
+	const float MIN_SIZE = 100.;
 
 	if (max.x - min.x < MIN_SIZE && max.y - min.y < MIN_SIZE)
 		return std::unique_ptr<quadtree_node>(new quadtree_leaf(min, max));
@@ -117,42 +132,40 @@ make_quadtree_node(const glm::vec2& min, const glm::vec2& max)
 		return std::unique_ptr<quadtree_node>(new quadtree_inner(min, max));
 }
 
-void
-frob::draw() const
+frob::frob(const glm::vec2& center, float height, float radius)
+: center_(center), height_(height), radius_(radius)
 {
-	// FOR NOW
-
-	draw_section(0);
-	draw_section(height_);
-
 	float a = 0;
 	const float da = 2*M_PI/SIDES;
 
-	glBegin(GL_LINES);
-
 	for (int i = 0; i < SIDES; i++) {
-		const float c = cosf(a), s = sinf(a);
-		glVertex3f(center_.x + radius_*c, 0, center_.y + radius_*s);
-		glVertex3f(center_.x + radius_*c, height_, center_.y + radius_*s);
+		const float x = center_.x + radius_*cosf(a);
+		const float z = center_.y + radius_*sinf(a);
+
+		verts_[i] = glm::vec3(x, 0, z);
+		verts_[i + SIDES] = glm::vec3(x, height_, z);
+
 		a += da;
 	}
-
-	glEnd();
 }
 
 void
-frob::draw_section(float h) const
+frob::draw() const
 {
-	float a = 0;
-	const float da = 2*M_PI/SIDES;
+	glBegin(GL_LINE_LOOP);
+	for (int i = 0; i < SIDES; i++)
+		glVertex3fv(glm::value_ptr(verts_[i]));
+	glEnd();
 
 	glBegin(GL_LINE_LOOP);
+	for (int i = 0; i < SIDES; i++)
+		glVertex3fv(glm::value_ptr(verts_[i + SIDES]));
+	glEnd();
 
+	glBegin(GL_LINES);
 	for (int i = 0; i < SIDES; i++) {
-		const float c = cosf(a), s = sinf(a);
-		glVertex3f(center_.x + radius_*c, h, center_.y + radius_*s);
-		a += da;
+		glVertex3fv(glm::value_ptr(verts_[i]));
+		glVertex3fv(glm::value_ptr(verts_[i + SIDES]));
 	}
-
 	glEnd();
 }

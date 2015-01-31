@@ -127,7 +127,7 @@ intro_window::draw(float t)
 	boids_->draw(t);
 #endif
 
-#if 0
+#if 1
 	const int FRAMES_PER_FPS_UPDATE = 16;
 
 	if (++frame_count_ == FRAMES_PER_FPS_UPDATE) {
