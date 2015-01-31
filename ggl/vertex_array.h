@@ -116,9 +116,6 @@ public:
 	vertex_array(int capacity)
 	{ verts_.reserve(capacity); }
 
-  	vertex_array(const vertex_array&) = delete;
-	vertex_array& operator=(const vertex_array&) = delete;
-
 	void clear()
 	{ verts_.clear(); }
 

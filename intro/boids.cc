@@ -7,6 +7,7 @@
 
 #include "common.h"
 #include "util.h"
+#include "program_manager.h"
 #include "quadtree.h"
 #include "boids.h"
 
@@ -153,11 +154,20 @@ boids::draw(float t)
 	const frustum f(FOV, aspect, Z_NEAR, Z_FAR);
 	extern int leaves_drawn;
 
-	glm::vec3 eye = (glm::rotate(.1f*t, glm::vec3(0, 1, 0))*glm::vec4(0, 500 + 400*sinf(.5f*t), -100, 1)).xyz();
+	glm::vec3 eye = (glm::rotate(.1f*t, glm::vec3(0, 1, 0))*glm::vec4(0, 120 /* 500 + 400*sinf(.5f*t) */, -100, 1)).xyz();
 
-	glm::mat4 mv = glm::lookAt(eye, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+	glm::mat4 mv = glm::lookAt(eye, glm::vec3(0, 20, 100), glm::vec3(0, 1, 0));
 
 	leaves_drawn = 0;
+
+	const ggl::program *prog = get_program(PROG_FAKEWIRE);
+	
+	prog->use();
+	prog->set_uniform_f("color", 1, 1, 1);
+
+	glEnable(GL_DEPTH_TEST);
+	glDisable(GL_BLEND);
+	glEnable(GL_CULL_FACE);
 
 	terrain_root_->draw(mv, f);
 

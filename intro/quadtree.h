@@ -6,6 +6,8 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec2.hpp>
 
+#include <ggl/vertex_array.h>
+
 #include "frustum.h"
 
 struct frob
@@ -19,7 +21,7 @@ struct frob
 	glm::vec2 center_;
 	float height_;
 	float radius_;
-	glm::vec3 verts_[2*SIDES];
+	ggl::vertex_array<ggl::vertex_texcoord<GLfloat, 3, GLshort, 1>> tri_strips_[SIDES + 1];
 };
 
 struct quadtree_node

@@ -115,7 +115,7 @@ intro_window::draw(float t)
 
 	glViewport(0, 0, g_viewport_width, g_viewport_height);
 	glClearColor(0, 0, 0, 0);
-	glClear(GL_COLOR_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
 	if (player_)
 		update_spectrum_bars(t);
