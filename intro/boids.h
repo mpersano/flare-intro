@@ -30,6 +30,8 @@ public:
 	void draw(float t);
 
 private:
+	void init_terrain();
+
 	static const int NUM_BOIDS = 128;
 	boid boids_[NUM_BOIDS];
 	std::unique_ptr<quadtree_node> terrain_root_;

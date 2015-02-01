@@ -17,9 +17,9 @@ struct quadtree_leaf : quadtree_node
 	{ }
 
 	void draw(const glm::mat4& mv, const frustum& f) const;
-	void insert(const frob& f);
+	void insert(const cell& f);
 
-	std::vector<frob> frobs_;
+	std::vector<cell> cells_;
 };
 
 struct quadtree_inner : quadtree_node
@@ -29,7 +29,7 @@ struct quadtree_inner : quadtree_node
 	{ }
 
 	void draw(const glm::mat4& mv, const frustum& f) const;
-	void insert(const frob& f);
+	void insert(const cell& f);
 
 	std::unique_ptr<quadtree_node> children_[4];
 };
@@ -43,22 +43,19 @@ quadtree_leaf::draw(const glm::mat4& mv, const frustum& f) const
 		glLoadMatrixf(glm::value_ptr(mv));
 		// box_.draw();
 
-		glColor4f(1, 1, 1, 1);
-		for (const auto& f : frobs_)
+		for (const auto& f : cells_)
 			f.draw();
 	}
 }
 
 void
-quadtree_leaf::insert(const frob& f)
+quadtree_leaf::insert(const cell& f)
 {
 	assert(f.center_.x >= min_.x && f.center_.x < max_.x);
-	assert(f.center_.y >= min_.y && f.center_.y < max_.y);
+	assert(f.center_.z >= min_.y && f.center_.z < max_.y);
 
-	frobs_.push_back(f);
-
-	box_ += glm::vec3(f.center_.x - f.radius_, 0, f.center_.y - f.radius_);
-	box_ += glm::vec3(f.center_.x + f.radius_, f.height_, f.center_.y + f.radius_);
+	cells_.push_back(f);
+	box_ += f.box_;
 }
 
 void
@@ -76,15 +73,15 @@ quadtree_inner::draw(const glm::mat4& mv, const frustum& f) const
 }
 
 void
-quadtree_inner::insert(const frob& f)
+quadtree_inner::insert(const cell& f)
 {
 	assert(f.center_.x >= min_.x && f.center_.x < max_.x);
-	assert(f.center_.y >= min_.y && f.center_.y < max_.y);
+	assert(f.center_.z >= min_.y && f.center_.z < max_.y);
 
 	glm::vec2 mid = .5f*(min_ + max_);
 
 	if (f.center_.x < mid.x) {
-		if (f.center_.y < mid.y) {
+		if (f.center_.z < mid.y) {
 			// insert into 0
 			if (!children_[0])
 				children_[0] = make_quadtree_node(min_, mid);
@@ -100,7 +97,7 @@ quadtree_inner::insert(const frob& f)
 			box_ += children_[1]->box_;
 		}
 	} else {
-		if (f.center_.y < mid.y) {
+		if (f.center_.z < mid.y) {
 			// insert into 2
 			if (!children_[2])
 				children_[2] = make_quadtree_node(glm::vec2(mid.x, min_.y), glm::vec2(max_.x, mid.y));
@@ -132,63 +129,40 @@ make_quadtree_node(const glm::vec2& min, const glm::vec2& max)
 		return std::unique_ptr<quadtree_node>(new quadtree_inner(min, max));
 }
 
-frob::frob(const glm::vec2& center, float height, float radius)
-: center_(center), height_(height), radius_(radius)
+cell::cell(const glm::vec3& center, const glm::vec3& normal, float radius)
+: center_(center)
 {
-	glm::vec3 verts[2*SIDES];
+	glm::vec3 up = glm::normalize(glm::cross(glm::vec3(1, 0, 0), normal));
+	glm::vec3 left = glm::normalize(glm::cross(up, normal));
+
+	glm::vec3 verts[SIDES];
 
 	float a = 0;
 	const float da = 2*M_PI/SIDES;
 
 	for (int i = 0; i < SIDES; i++) {
-		const float x = center_.x + radius_*cosf(a);
-		const float z = center_.y + radius_*sinf(a);
+		const float dx = radius*cosf(a);
+		const float dy = radius*sinf(a);
 
-		verts[i] = glm::vec3(x, 0, z);
-		verts[i + SIDES] = glm::vec3(x, height_, z);
+		verts[i] = center + dx*left + dy*up;
+		box_ += verts[i];
 
 		a += da;
 	}
 
-	// sides
+	tri_strip_.add_vertex({ { center.x, center.y, center.z }, { 0 } });
 
-	for (int i = 0; i < SIDES; i++) {
-		const glm::vec3& v0 = verts[i];
-		const glm::vec3& v1 = verts[i + SIDES];
-		const glm::vec3& v2 = verts[(i + 1)%SIDES + SIDES];
-		const glm::vec3& v3 = verts[(i + 1)%SIDES];
-
-		const glm::vec3 vm = .25f*(v0 + v1 + v2 + v3);
-
-		auto& va = tri_strips_[i];
-		va.add_vertex({ { vm.x, vm.y, vm.z }, { 0 } });
-		va.add_vertex({ { v0.x, v0.y, v0.z }, { 1 } });
-		va.add_vertex({ { v1.x, v1.y, v1.z }, { 1 } });
-		va.add_vertex({ { v2.x, v2.y, v2.z }, { 1 } });
-		va.add_vertex({ { v3.x, v3.y, v3.z }, { 1 } });
-		va.add_vertex({ { v0.x, v0.y, v0.z }, { 1 } });
-	}
-
-	// top
-
-	auto& va = tri_strips_[SIDES];
-
-	va.add_vertex({ { center_.x, height_, center_.y }, { 0 } });
-
-	for (int i = 2*SIDES - 1; i >= SIDES; i--) {
+	for (int i = SIDES - 1; i >= 0; i--) {
 		const auto& v = verts[i];
-		va.add_vertex({ { v.x, v.y, v.z }, { 1 } });
+		tri_strip_.add_vertex({ { v.x, v.y, v.z }, { 1 } });
 	}
 
-	const auto& v = verts[2*SIDES - 1];
-	va.add_vertex({ { v.x, v.y, v.z }, { 1 } });
+	const auto& v = verts[SIDES - 1];
+	tri_strip_.add_vertex({ { v.x, v.y, v.z }, { 1 } });
 }
 
 void
-frob::draw() const
+cell::draw() const
 {
-	// XXX: should use glMultiDrawArrays really
-
-	for (const auto& va : tri_strips_)
-		va.draw(GL_TRIANGLE_FAN);
+	tri_strip_.draw(GL_TRIANGLE_FAN);
 }

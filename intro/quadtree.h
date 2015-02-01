@@ -4,24 +4,23 @@
 #include <vector>
 
 #include <glm/mat4x4.hpp>
-#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
 
 #include <ggl/vertex_array.h>
 
 #include "frustum.h"
 
-struct frob
+struct cell
 {
-	frob(const glm::vec2& center, float height, float radius);
+	cell(const glm::vec3& center, const glm::vec3& normal, float radius);
 
 	void draw() const;
 
 	static const int SIDES = 6;
 
-	glm::vec2 center_;
-	float height_;
-	float radius_;
-	ggl::vertex_array<ggl::vertex_texcoord<GLfloat, 3, GLshort, 1>> tri_strips_[SIDES + 1];
+	glm::vec3 center_;
+	ggl::vertex_array<ggl::vertex_texcoord<GLfloat, 3, GLshort, 1>> tri_strip_;
+	bounding_box box_;
 };
 
 struct quadtree_node
@@ -33,7 +32,7 @@ struct quadtree_node
 	virtual ~quadtree_node() = default;
 
 	virtual void draw(const glm::mat4& mv, const frustum& f) const = 0;
-	virtual void insert(const frob& f) = 0;
+	virtual void insert(const cell& f) = 0;
 
 	bounding_box box_;
 	glm::vec2 min_, max_;

@@ -5,6 +5,9 @@
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <ggl/pixmap.h>
+#include <ggl/panic.h>
+
 #include "common.h"
 #include "util.h"
 #include "program_manager.h"
@@ -14,7 +17,7 @@
 namespace {
 
 const float Z_NEAR = .1;
-const float Z_FAR = 1000.;
+const float Z_FAR = 200.;
 const float FOV = 45;
 
 const float SPEED = 50.;
@@ -86,9 +89,43 @@ boid::draw() const
 boids::boids()
 : prev_t_(0)
 {
+	init_terrain();
+}
+
+void
+boids::init_terrain()
+{
+	struct heightmap {
+		heightmap()
+		: pm_(ggl::pixmap::load_from_png("data/images/heightmap.png"))
+		{
+			if (pm_->type != ggl::pixmap::pixel_type::GRAY)
+				panic("invalid pixel type for heightmap");
+		}
+
+		float get_height(float u, float v) const
+		{
+			int r = static_cast<int>(v*pm_->height)%pm_->height;
+			int c = static_cast<int>(u*pm_->width)%pm_->width;
+
+			float dr = fmod(v*pm_->height, 1);
+			float dc = fmod(u*pm_->width, 1);
+
+			float v00 = pm_->data[r*pm_->width + c];
+			float v01 = pm_->data[r*pm_->width + (c + 1)%pm_->width];
+
+			float v10 = pm_->data[((r + 1)%pm_->height)*pm_->width + c];
+			float v11 = pm_->data[((r + 1)%pm_->height)*pm_->width + (c + 1)%pm_->height];
+
+			return (1 - dr)*((1 - dc)*v00 + dc*v01) + dr*((1 - dc)*v10 + dc*v11);
+		}
+
+		std::unique_ptr<ggl::pixmap> pm_;
+	} hmap;
+
 	const float TERRAIN_SIZE = 1000;
-	const int COLUMN_ROWS = 40;
-	const float COLUMN_RADIUS = .95f*.5f*TERRAIN_SIZE/COLUMN_ROWS;
+	const int COLUMN_ROWS = 100;
+	const float COLUMN_RADIUS = .98f*.5f*TERRAIN_SIZE/COLUMN_ROWS;
 
 	const float min = -.5f*TERRAIN_SIZE - COLUMN_RADIUS;
 	const float max = .5f*TERRAIN_SIZE + COLUMN_RADIUS;
@@ -101,8 +138,23 @@ boids::boids()
 		float x = -.5f*TERRAIN_SIZE + COLUMN_RADIUS;
 
 		for (int j = 0; j < COLUMN_ROWS; j++) {
-			const glm::vec2 center(x, y + ((j & 1) ? COLUMN_RADIUS : 0));
-			terrain_root_->insert(frob(center, frand(5, 100), COLUMN_RADIUS));
+			if ((irand() & 7) != 0) {
+				const float center_x = x;
+				const float center_y = y + ((j & 1) ? COLUMN_RADIUS : 0);
+
+				const float u = (center_x + .5*TERRAIN_SIZE)/TERRAIN_SIZE;
+				const float v = (center_y + .5*TERRAIN_SIZE)/TERRAIN_SIZE;
+
+				const float h = hmap.get_height(u, v);
+
+				const float du = .01*(hmap.get_height(u + .01, v) - h);
+				const float dv = .01*(hmap.get_height(u, v + .01) - h);
+
+				glm::vec3 normal = glm::cross(glm::normalize(glm::vec3(.1, du, 0)), glm::normalize(glm::vec3(0, dv, .1)));
+
+				terrain_root_->insert(cell(glm::vec3(center_x, h, center_y), normal, COLUMN_RADIUS));
+			}
+
 			x += 2*COLUMN_RADIUS;
 		}
 
@@ -156,7 +208,7 @@ boids::draw(float t)
 
 	glm::vec3 eye = (glm::rotate(.1f*t, glm::vec3(0, 1, 0))*glm::vec4(0, 120 /* 500 + 400*sinf(.5f*t) */, -100, 1)).xyz();
 
-	glm::mat4 mv = glm::lookAt(eye, glm::vec3(0, 20, 100), glm::vec3(0, 1, 0));
+	glm::mat4 mv = glm::lookAt(eye, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 
 	leaves_drawn = 0;
 
