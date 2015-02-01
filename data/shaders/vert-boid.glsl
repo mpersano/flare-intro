@@ -1,7 +1,7 @@
-varying float edge_dist;
+varying vec3 color;
 
 void main(void)
 {
 	gl_Position = gl_ModelViewProjectionMatrix*gl_Vertex;
-	edge_dist = gl_MultiTexCoord0.x;
+	color = gl_MultiTexCoord0.xyz;
 }

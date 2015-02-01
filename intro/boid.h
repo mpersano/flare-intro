@@ -18,7 +18,6 @@ private:
 
 	glm::vec3 position_;
 	glm::mat4 direction_;
-
-	static const int NUM_FACES = 6;
-	ggl::vertex_array<ggl::vertex_texcoord<GLfloat, 3, GLshort, 1>> faces_[6];
+	float ang_speed_;
+	ggl::vertex_array<ggl::vertex_texcoord<GLfloat, 3, GLfloat, 3>> va_;
 };

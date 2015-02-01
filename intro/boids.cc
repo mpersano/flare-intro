@@ -154,7 +154,7 @@ boids::draw(float t)
 
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
-	glDisable(GL_CULL_FACE);
+	// glDisable(GL_CULL_FACE);
 	get_program(PROG_BOID)->use();
 
 	for (const auto& boid : boids_)

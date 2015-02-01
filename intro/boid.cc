@@ -12,12 +12,13 @@
 namespace {
 
 const float SPEED = 90.;
-const float ANG_SPEED = .75;
+const float ANG_SPEED = .7;
 
 }
 
 boid::boid()
 : position_(frand(-50, 50), frand(150, 200), frand(-50, 50))
+, ang_speed_(frand(1., 3.))
 {
 	init_faces();
 }
@@ -25,43 +26,30 @@ boid::boid()
 void
 boid::init_faces()
 {
-	const float l = 10;
-
 	const glm::vec3 verts[] = {
-		{ -l, -l, -l },
-		{ -l, l, -l },
-		{ l, l, -l },
-		{ l, -l, -l },
-		{ -l, -l, l },
-		{ -l, l, l },
-		{ l, l, l },
-		{ l, -l, l },
+		{ 0, 0, 1 },
+		{ 0, 0.942809, -0.33333 },
+		{ -0.816497, -0.471405, -0.33333 },
+		{ 0.816497, -0.471405, -0.33333 },
 	};
 
-	const int faces[NUM_FACES][4] = {
-		{ 0, 1, 2, 3 },
-		{ 6, 5, 4, 7 },
-		{ 3, 2, 6, 7 },
-		{ 1, 0, 4, 5 },
-		{ 0, 3, 7, 4 },
-		{ 1, 5, 6, 2 },
+	const int faces[][3] = {
+		{ 0, 1, 2 },
+		{ 0, 3, 1 },
+		{ 0, 2, 3 },
+		{ 1, 3, 2 },
 	};
 
-	for (int i = 0; i < 6; i++) {
-		const auto& face = faces[i];
-		const glm::vec3& v0 = verts[face[0]];
-		const glm::vec3& v1 = verts[face[1]];
-		const glm::vec3& v2 = verts[face[2]];
-		const glm::vec3& v3 = verts[face[3]];
-		const glm::vec3 vm = .25f*(v0 + v1 + v2 + v3);
+	for (const auto& face : faces) {
+		const float l = 20;
 
-		auto& va = faces_[i];
-		va.add_vertex({ { vm.x, vm.y, vm.z }, { 0 } });
-		va.add_vertex({ { v0.x, v0.y, v0.z }, { 1 } });
-		va.add_vertex({ { v1.x, v1.y, v1.z }, { 1 } });
-		va.add_vertex({ { v2.x, v2.y, v2.z }, { 1 } });
-		va.add_vertex({ { v3.x, v3.y, v3.z }, { 1 } });
-		va.add_vertex({ { v0.x, v0.y, v0.z }, { 1 } });
+		const glm::vec3& v0 = l*verts[face[0]].xzy();
+		const glm::vec3& v1 = l*verts[face[1]].xzy();
+		const glm::vec3& v2 = l*verts[face[2]].xzy();
+
+		va_.add_vertex({ { v0.x, v0.y, v0.z }, { frand(0, .125), frand(0, .125), frand(0, .5) } });
+		va_.add_vertex({ { v1.x, v1.y, v1.z }, { frand(0, .125), frand(0, .125), frand(0, .5) } });
+		va_.add_vertex({ { v2.x, v2.y, v2.z }, { frand(0, .125), frand(0, .125), frand(0, .5) } });
 	}
 }
 
@@ -99,7 +87,9 @@ boid::update(float dt, const glm::vec3& target)
 
 	glm::mat4 m1 = glm::rotate(dt*ANG_SPEED*a1*(v1.x < 0 ? -1 : 1), glm::vec3(1, 0, 0));
 
-	direction_ *= m0*m1;
+	glm::mat4 m2 = glm::rotate(ang_speed_*dt, glm::vec3(0, 0, 1));
+
+	direction_ *= m0*m1*m2;
 
 	glm::vec3 dir = glm::normalize(direction_[2].xyz());
 	position_ -= dt*SPEED*dir;
@@ -111,8 +101,7 @@ boid::draw() const
 	glPushMatrix();
 	glMultMatrixf(glm::value_ptr(glm::translate(position_)*direction_));
 
-	for (auto& va : faces_)
-		va.draw(GL_TRIANGLE_FAN);
+	va_.draw(GL_TRIANGLES);
 
 	glPopMatrix();
 }
