@@ -144,6 +144,8 @@ boids::draw(float t)
 	glm::vec3 eye = (glm::rotate(.1f*t, glm::vec3(0, 1, 0))*glm::vec4(0, 180, -250, 1)).xyz();
 	glm::mat4 mv = glm::lookAt(eye, /* glm::vec3(0, 0, 0) */ target, glm::vec3(0, 1, 0));
 
+	glLoadMatrixf(glm::value_ptr(mv));
+
 	glEnable(GL_DEPTH_TEST);
 	glDisable(GL_BLEND);
 	glEnable(GL_CULL_FACE);

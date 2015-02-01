@@ -58,8 +58,6 @@ bounding_box::draw() const
 		{ 1, 5, 6, 2 },
 	};
 
-	glColor4f(1, 0, 0, 1);
-
 	for (const auto& face : faces) {
 		glBegin(GL_LINE_LOOP);
 

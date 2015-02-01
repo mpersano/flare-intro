@@ -40,7 +40,6 @@ quadtree_leaf::draw(const glm::mat4& mv, const frustum& f) const
 	if (f.intersects(mv, box_)) {
 		++leaves_drawn;
 
-		glLoadMatrixf(glm::value_ptr(mv));
 		// box_.draw();
 
 		for (const auto& f : cells_)
@@ -62,7 +61,6 @@ void
 quadtree_inner::draw(const glm::mat4& mv, const frustum& f) const
 {
 	if (f.intersects(mv, box_)) {
-		// glLoadMatrixf(glm::value_ptr(mv));
 		// box_.draw();
 
 		for (const auto& child : children_) {
