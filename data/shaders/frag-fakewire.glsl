@@ -1,13 +1,17 @@
 varying float edge_dist;
 varying float world_z;
 
-uniform vec3 color;
-
 void main(void)
 {
-	float e = edge_dist;
-	float s = 1. - smoothstep(.85, .8, edge_dist);
-	float q = smoothstep(1., .95, edge_dist);
+	vec3 inner_color = vec3(.125, .125, .125);
+	vec3 border_color = vec3(.5, .5, .5);
 
-	gl_FragColor = vec4((.2 + .8*s)*color*q*smoothstep(200, 100, world_z), 1);
+	float q = smoothstep(.7, .6, edge_dist);
+	float r = smoothstep(1., .9, edge_dist);
+
+	float fog = smoothstep(700., 600., world_z);
+
+	vec3 color = (q*inner_color + (1. - q)*border_color)*fog*r;
+
+	gl_FragColor = vec4(color, 1);
 }

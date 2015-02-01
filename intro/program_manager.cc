@@ -36,6 +36,7 @@ program_manager::program_manager()
 		{ "vert-wiretri.glsl", "frag-wiretri.glsl" },
 		{ "vert-decal.glsl", "frag-textblur.glsl" },
 		{ "vert-fakewire.glsl", "frag-fakewire.glsl" },
+		{ "vert-boid.glsl", "frag-boid.glsl" },
 	};
 
 	for (int i = 0; i < NUM_PROGRAMS; i++) {

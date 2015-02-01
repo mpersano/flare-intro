@@ -34,6 +34,7 @@ set(INTRO_SOURCES
 	bezier.cc
 	tube.cc
 	text.cc
+	boid.cc
 	boids.cc
 	quadtree.cc
 	main.cc
