@@ -18,7 +18,7 @@
 #include "fx.h"
 #include "tube.h"
 #include "text.h"
-#include "boids.h"
+#include "dragon.h"
 #include "util.h"
 
 int g_viewport_width;
@@ -45,7 +45,7 @@ private:
 	ALCcontext *al_context_;
 
 	std::unique_ptr<ogg_player> player_;
-	std::unique_ptr<fx> tube_, text_, boids_;
+	std::unique_ptr<fx> tube_, text_, dragon_;
 	int frame_count_;
 	float last_fps_update_t_;
 	bool mute_;
@@ -53,9 +53,9 @@ private:
 
 intro_window::intro_window(bool mute, bool fullscreen)
 : ggl::window(g_viewport_width, g_viewport_height, fullscreen)
-, tube_(/* new tube */ nullptr)
+, tube_(new tube)
 , text_(new text)
-, boids_(new boids)
+, dragon_(new dragon)
 , frame_count_(0)
 , mute_(mute)
 {
@@ -124,7 +124,7 @@ intro_window::draw(float t)
 	tube_->draw(t);
 	text_->draw(t);
 #else
-	boids_->draw(t);
+	dragon_->draw(t);
 #endif
 
 #if 1

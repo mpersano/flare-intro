@@ -35,7 +35,7 @@ set(INTRO_SOURCES
 	tube.cc
 	text.cc
 	boid.cc
-	boids.cc
+	dragon.cc
 	quadtree.cc
 	main.cc
 	particle_texture.cc)

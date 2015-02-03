@@ -12,7 +12,7 @@
 #include "util.h"
 #include "program_manager.h"
 #include "quadtree.h"
-#include "boids.h"
+#include "dragon.h"
 
 namespace {
 
@@ -33,14 +33,14 @@ sign(float x)
 
 };
 
-boids::boids()
+dragon::dragon()
 : prev_t_(0)
 {
 	init_terrain();
 }
 
 void
-boids::init_terrain()
+dragon::init_terrain()
 {
 	struct heightmap {
 		heightmap()
@@ -114,7 +114,7 @@ boids::init_terrain()
 }
 
 void
-boids::draw(float t)
+dragon::draw(float t)
 {
 	// update boids
 

@@ -7,10 +7,10 @@
 
 class quadtree_node;
 
-class boids : public fx
+class dragon : public fx
 {
 public:
-	boids();
+	dragon();
 
 	void draw(float t);
 

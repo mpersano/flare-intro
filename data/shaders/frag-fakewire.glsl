@@ -9,7 +9,7 @@ void main(void)
 	float q = smoothstep(.7, .6, edge_dist);
 	float r = smoothstep(1., .9, edge_dist);
 
-	float fog = smoothstep(700., 600., world_z);
+	float fog = smoothstep(700., 500., world_z);
 
 	vec3 color = (q*inner_color + (1. - q)*border_color)*fog*r;
 

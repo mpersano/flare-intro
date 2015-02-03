@@ -18,6 +18,7 @@ const float ANG_SPEED = .7;
 
 boid::boid()
 : position_(frand(-50, 50), frand(150, 200), frand(-50, 50))
+, direction_(glm::rotate(frand(0, 2.*M_PI), glm::vec3(0, 1, 0))*glm::rotate(frand(0, 2.*M_PI), glm::vec3(1, 0, 0)))
 , ang_speed_(frand(1., 3.))
 {
 	init_faces();
