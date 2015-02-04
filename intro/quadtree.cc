@@ -1,12 +1,14 @@
 #include <cassert>
+#include <cstdio>
+#include <cstdlib>
 
 #include <GL/glew.h>
 
 #include <glm/gtc/type_ptr.hpp>
 
-#include "quadtree.h"
+#include <ggl/vertex_array.h>
 
-int leaves_drawn;
+#include "quadtree.h"
 
 namespace {
 
@@ -19,7 +21,7 @@ struct quadtree_leaf : quadtree_node
 	void draw(const glm::mat4& mv, const frustum& f) const;
 	void insert(const cell& f);
 
-	std::vector<cell> cells_;
+	ggl::indexed_vertex_array<GLuint, ggl::vertex_texcoord<GLfloat, 3, GLshort, 1>> va_;
 };
 
 struct quadtree_inner : quadtree_node
@@ -38,23 +40,49 @@ void
 quadtree_leaf::draw(const glm::mat4& mv, const frustum& f) const
 {
 	if (f.intersects(mv, box_)) {
-		++leaves_drawn;
-
 		// box_.draw();
-
-		for (const auto& f : cells_)
-			f.draw();
+		va_.draw(GL_TRIANGLES);
 	}
 }
 
 void
 quadtree_leaf::insert(const cell& f)
 {
-	assert(f.center_.x >= min_.x && f.center_.x < max_.x);
-	assert(f.center_.z >= min_.y && f.center_.z < max_.y);
+	const glm::vec3& center = f.center;
+	const glm::vec3& normal = f.normal;
+	const float radius = f.radius;
 
-	cells_.push_back(f);
-	box_ += f.box_;
+	assert(center.x >= min_.x && center.x < max_.x);
+	assert(center.z >= min_.y && center.z < max_.y);
+
+	const glm::vec3 up = glm::normalize(glm::cross(glm::vec3(1, 0, 0), normal));
+	const glm::vec3 left = glm::normalize(glm::cross(up, normal));
+
+	const int base_index = va_.get_num_verts();
+
+	va_.add_vertex({ { center.x, center.y, center.z }, { 0 } });
+
+	static const int SIDES = 6;
+
+	float a = 0;
+	const float da = 2*M_PI/SIDES;
+
+	for (int i = 0; i < SIDES; i++) {
+		const float dx = radius*cosf(a);
+		const float dy = radius*sinf(a);
+		const glm::vec3 v = center + dx*left + dy*up;
+
+		va_.add_vertex({ { v.x, v.y, v.z }, { 1 } });
+
+		box_ += v;
+		a += da;
+	}
+
+	for (int i = 0; i < SIDES; i++) {
+		va_.add_index(base_index);
+		va_.add_index(base_index + (i + 1)%SIDES + 1);
+		va_.add_index(base_index + i + 1);
+	}
 }
 
 void
@@ -73,13 +101,13 @@ quadtree_inner::draw(const glm::mat4& mv, const frustum& f) const
 void
 quadtree_inner::insert(const cell& f)
 {
-	assert(f.center_.x >= min_.x && f.center_.x < max_.x);
-	assert(f.center_.z >= min_.y && f.center_.z < max_.y);
+	assert(f.center.x >= min_.x && f.center.x < max_.x);
+	assert(f.center.z >= min_.y && f.center.z < max_.y);
 
 	glm::vec2 mid = .5f*(min_ + max_);
 
-	if (f.center_.x < mid.x) {
-		if (f.center_.z < mid.y) {
+	if (f.center.x < mid.x) {
+		if (f.center.z < mid.y) {
 			// insert into 0
 			if (!children_[0])
 				children_[0] = make_quadtree_node(min_, mid);
@@ -95,7 +123,7 @@ quadtree_inner::insert(const cell& f)
 			box_ += children_[1]->box_;
 		}
 	} else {
-		if (f.center_.z < mid.y) {
+		if (f.center.z < mid.y) {
 			// insert into 2
 			if (!children_[2])
 				children_[2] = make_quadtree_node(glm::vec2(mid.x, min_.y), glm::vec2(max_.x, mid.y));
@@ -125,42 +153,4 @@ make_quadtree_node(const glm::vec2& min, const glm::vec2& max)
 		return std::unique_ptr<quadtree_node>(new quadtree_leaf(min, max));
 	else
 		return std::unique_ptr<quadtree_node>(new quadtree_inner(min, max));
-}
-
-cell::cell(const glm::vec3& center, const glm::vec3& normal, float radius)
-: center_(center)
-{
-	glm::vec3 up = glm::normalize(glm::cross(glm::vec3(1, 0, 0), normal));
-	glm::vec3 left = glm::normalize(glm::cross(up, normal));
-
-	glm::vec3 verts[SIDES];
-
-	float a = 0;
-	const float da = 2*M_PI/SIDES;
-
-	for (int i = 0; i < SIDES; i++) {
-		const float dx = radius*cosf(a);
-		const float dy = radius*sinf(a);
-
-		verts[i] = center + dx*left + dy*up;
-		box_ += verts[i];
-
-		a += da;
-	}
-
-	tri_strip_.add_vertex({ { center.x, center.y, center.z }, { 0 } });
-
-	for (int i = SIDES - 1; i >= 0; i--) {
-		const auto& v = verts[i];
-		tri_strip_.add_vertex({ { v.x, v.y, v.z }, { 1 } });
-	}
-
-	const auto& v = verts[SIDES - 1];
-	tri_strip_.add_vertex({ { v.x, v.y, v.z }, { 1 } });
-}
-
-void
-cell::draw() const
-{
-	tri_strip_.draw(GL_TRIANGLE_FAN);
 }

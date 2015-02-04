@@ -138,7 +138,6 @@ dragon::draw(float t)
 	glBlendFunc(GL_ONE, GL_ONE);
 
 	const frustum f(FOV, aspect, Z_NEAR, Z_FAR);
-	extern int leaves_drawn;
 
 	// glm::vec3 eye = glm::vec3(0, 180, -250);
 	glm::vec3 eye = (glm::rotate(.1f*t, glm::vec3(0, 1, 0))*glm::vec4(0, 180, -250, 1)).xyz();
@@ -152,7 +151,6 @@ dragon::draw(float t)
 	get_program(PROG_FAKEWIRE)->use();
 
 	terrain_root_->draw(mv, f);
-	leaves_drawn = 0;
 
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
