@@ -25,10 +25,11 @@ struct quadtree_node
 	: min_(min), max_(max)
 	{ }
 
-	virtual ~quadtree_node() = default;
+	virtual ~quadtree_node() { }
 
 	virtual void draw(const glm::mat4& mv, const frustum& f) const = 0;
 	virtual void insert(const cell& f) = 0;
+	virtual void upload_to_gpu() = 0;
 
 	bounding_box box_;
 	glm::vec2 min_, max_;

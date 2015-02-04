@@ -95,7 +95,7 @@ make_portal_cell(float spectrum_offset)
 			screen_center = (p.xy()/p.w)*.5f*viewport;
 			}
 
-			static ggl::vertex_array<ggl::vertex_texcoord<GLfloat, 2, GLfloat, 1>> va(3*NUM_VERTS);
+			static ggl::vertex_array<ggl::vertex_texcoord<GLfloat, 2, GLfloat, 1>> va;
 
 			va.clear();
 
@@ -389,7 +389,7 @@ tube::draw(const glm::mat4& mv, bool show_particles, float t) const
 		glm::vec3 up(mv[0][0], mv[1][0], mv[2][0]);
 		glm::vec3 right(mv[0][1], mv[1][1], mv[2][1]);
 
-		static particle::vertex_array va(6*NUM_PARTICLES);
+		static particle::vertex_array va;
 
 		va.clear();
 

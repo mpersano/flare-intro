@@ -109,26 +109,17 @@ struct client_state<vertex_texcoord<VertexType, VertexSize, TexCoordType, TexCoo
 
 // TODO: LEARN C++
 
-template <typename VertexType, typename Impl>
+template <typename VertexType>
 class vertex_array_base
 {
 public:
 	vertex_array_base() = default;
-
-	vertex_array_base(int capacity)
-	{ verts_.reserve(capacity); }
 
 	void clear()
 	{ verts_.clear(); }
 
 	void add_vertex(const VertexType& v)
 	{ verts_.push_back(v); }
-
-	void draw(GLenum mode) const
-	{
-		detail::client_state<VertexType> state(&verts_[0]);
-		static_cast<const Impl *>(this)->gl_draw(mode);
-	}
 
 	size_t get_num_verts() const
 	{ return verts_.size(); }
@@ -137,35 +128,11 @@ protected:
 	std::vector<VertexType> verts_;
 };
 
-template <typename VertexType>
-class vertex_array : public vertex_array_base<VertexType, vertex_array<VertexType>>
-{
-public:
-	typedef vertex_array_base<VertexType, vertex_array<VertexType>> base_type;
-
-	vertex_array()
-	{ }
-
-	vertex_array(int capacity)
-	: vertex_array_base<VertexType, vertex_array>(capacity)
-	{ }
-
-	void gl_draw(GLenum mode) const
-	{ glDrawArrays(mode, 0, this->verts_.size()); }
-};
-
 template <typename IndexType, typename VertexType>
-class indexed_vertex_array : public vertex_array_base<VertexType, indexed_vertex_array<IndexType, VertexType>>
+class indexed_vertex_array_base : public vertex_array_base<VertexType>
 {
 public:
-	typedef vertex_array_base<VertexType, indexed_vertex_array<IndexType, VertexType>> base_type;
-
-	indexed_vertex_array()
-	{ }
-
-	indexed_vertex_array(int capacity)
-	: base_type(capacity)
-	{ }
+	typedef vertex_array_base<VertexType> base_type;
 
 	void clear()
 	{
@@ -176,14 +143,127 @@ public:
 	void add_index(const IndexType& index)
 	{ indices_.push_back(index); }
 
-	void gl_draw(GLenum mode) const
-	{ glDrawElements(mode, indices_.size(), detail::gltype_to_glenum<IndexType>::type, &indices_[0]); }
-
 	size_t get_num_indices() const
 	{ return indices_.size(); }
 
 protected:
 	std::vector<IndexType> indices_;
 };
+
+template <typename VertexType>
+class vertex_array : public vertex_array_base<VertexType>
+{
+public:
+	void draw(GLenum mode) const
+	{
+		detail::client_state<VertexType> state(&this->verts_[0]);
+		glDrawArrays(mode, 0, this->verts_.size());
+	}
+};
+
+template <typename IndexType, typename VertexType>
+class indexed_vertex_array : public indexed_vertex_array_base<IndexType, VertexType>
+{
+public:
+	void draw(GLenum mode) const
+	{
+		detail::client_state<VertexType> state(&this->verts_[0]);
+		glDrawElements(mode, this->indices_.size(), detail::gltype_to_glenum<IndexType>::type, &this->indices_[0]);
+	}
+};
+
+// TODO: LEARN OPENGL
+
+class gl_buffer
+{
+public:
+	gl_buffer(GLenum target)
+	: target_(target)
+	{ glGenBuffers(1, &id_); }
+
+	gl_buffer(const gl_buffer&) = delete;
+	gl_buffer& operator=(const gl_buffer&) = delete;
+
+	~gl_buffer()
+	{ glDeleteBuffers(1, &id_); }
+
+	void bind() const
+	{ glBindBuffer(target_, id_); }
+
+	void unbind() const
+	{ glBindBuffer(target_, 0); }
+
+	void buffer(GLsizeiptr size, const GLvoid *data, GLenum usage) const
+	{
+		bind();
+		glBufferData(target_, size, data, usage);
+		unbind();
+	}
+
+private:
+	GLenum target_;
+	GLuint id_;
+};
+
+template <typename VertexType>
+class vbo : public vertex_array_base<VertexType>
+{
+public:
+	vbo()
+	: vertex_buffer_(GL_ARRAY_BUFFER)
+	{ }
+
+	// usage: GL_STATIC_DRAW or GL_DYNAMIC_DRAW
+	void buffer(GLenum usage) const
+	{
+		vertex_buffer_.buffer(this->verts_.size()*sizeof(VertexType), &this->verts_[0], usage);
+	}
+
+	void draw(GLenum mode) const
+	{
+		vertex_buffer_.bind();
+
+		detail::client_state<VertexType> state(0);
+		glDrawArrays(mode, 0, this->verts_.size());
+
+		vertex_buffer_.unbind();
+	}
+
+private:
+	gl_buffer vertex_buffer_;
+};
+
+template <typename IndexType, typename VertexType>
+class indexed_vbo : public indexed_vertex_array_base<IndexType, VertexType>
+{
+public:
+	indexed_vbo()
+	: vertex_buffer_(GL_ARRAY_BUFFER)
+	, index_buffer_(GL_ELEMENT_ARRAY_BUFFER)
+	{ }
+
+	// usage: GL_STATIC_DRAW or GL_DYNAMIC_DRAW
+	void buffer(GLenum usage) const
+	{
+		vertex_buffer_.buffer(this->verts_.size()*sizeof(VertexType), &this->verts_[0], usage);
+		index_buffer_.buffer(this->indices_.size()*sizeof(IndexType), &this->indices_[0], usage);
+	}
+
+	void draw(GLenum mode) const
+	{
+		vertex_buffer_.bind();
+		index_buffer_.bind();
+
+		detail::client_state<VertexType> state(0);
+		glDrawElements(mode, this->indices_.size(), detail::gltype_to_glenum<IndexType>::type, 0);
+
+		index_buffer_.unbind();
+		vertex_buffer_.unbind();
+	}
+
+private:
+	gl_buffer vertex_buffer_, index_buffer_;
+};
+
 
 } // ggl

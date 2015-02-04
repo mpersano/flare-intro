@@ -108,6 +108,8 @@ dragon::init_terrain()
 		y += 2*COLUMN_RADIUS;
 	}
 
+	terrain_root_->upload_to_gpu();
+
 	printf("%f,%f,%f -> %f,%f,%f\n",
 	  terrain_root_->box_.min.x, terrain_root_->box_.min.y, terrain_root_->box_.min.z, 
 	  terrain_root_->box_.max.x, terrain_root_->box_.max.y, terrain_root_->box_.max.z);

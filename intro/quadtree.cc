@@ -20,8 +20,9 @@ struct quadtree_leaf : quadtree_node
 
 	void draw(const glm::mat4& mv, const frustum& f) const;
 	void insert(const cell& f);
+	void upload_to_gpu();
 
-	ggl::indexed_vertex_array<GLuint, ggl::vertex_texcoord<GLfloat, 3, GLshort, 1>> va_;
+	ggl::indexed_vbo<GLuint, ggl::vertex_texcoord<GLfloat, 3, GLshort, 1>> va_;
 };
 
 struct quadtree_inner : quadtree_node
@@ -32,6 +33,7 @@ struct quadtree_inner : quadtree_node
 
 	void draw(const glm::mat4& mv, const frustum& f) const;
 	void insert(const cell& f);
+	void upload_to_gpu();
 
 	std::unique_ptr<quadtree_node> children_[4];
 };
@@ -43,6 +45,12 @@ quadtree_leaf::draw(const glm::mat4& mv, const frustum& f) const
 		// box_.draw();
 		va_.draw(GL_TRIANGLES);
 	}
+}
+
+void
+quadtree_leaf::upload_to_gpu()
+{
+	va_.buffer(GL_STATIC_DRAW);
 }
 
 void
@@ -140,6 +148,13 @@ quadtree_inner::insert(const cell& f)
 			box_ += children_[3]->box_;
 		}
 	}
+}
+
+void
+quadtree_inner::upload_to_gpu()
+{
+	for (const auto& child : children_)
+		child->upload_to_gpu();
 }
 
 } // namespace
