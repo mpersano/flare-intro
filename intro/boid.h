@@ -19,5 +19,5 @@ private:
 	glm::vec3 position_;
 	glm::mat4 direction_;
 	float ang_speed_;
-	ggl::vertex_array<ggl::vertex_texcoord<GLfloat, 3, GLfloat, 3>> va_;
+	ggl::indexed_vertex_array<GLubyte, ggl::vertex_texcoord<GLfloat, 3, GLfloat, 3>> va_;
 };

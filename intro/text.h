@@ -26,7 +26,7 @@ private:
 		float start_t_, duration_;
 		twitch_vector twitches_;
 		ggl::texture texture_;
-		ggl::vertex_array<ggl::vertex_texcoord<GLint, 2, GLfloat, 2>> va_;
+		ggl::vbo<ggl::vertex_texcoord<GLint, 2, GLfloat, 2>> va_;
 	};
 
 	std::vector<std::unique_ptr<label>> labels_;

@@ -27,14 +27,21 @@ boid::boid()
 void
 boid::init_faces()
 {
-	const glm::vec3 verts[] = {
+	const float radius = 20;
+
+	static const glm::vec3 verts[] = {
 		{ 0, 0, 1 },
 		{ 0, 0.942809, -0.33333 },
 		{ -0.816497, -0.471405, -0.33333 },
 		{ 0.816497, -0.471405, -0.33333 },
 	};
 
-	const int faces[][3] = {
+	for (const auto& v : verts) {
+		glm::vec3 u = radius*v;
+		va_.add_vertex({ { u.x, u.y, u.z }, { frand(0, .125), frand(0, .125), frand(0, .5) } });
+	}
+
+	static const int faces[][3] = {
 		{ 0, 1, 2 },
 		{ 0, 3, 1 },
 		{ 0, 2, 3 },
@@ -42,15 +49,9 @@ boid::init_faces()
 	};
 
 	for (const auto& face : faces) {
-		const float l = 20;
-
-		const glm::vec3& v0 = l*verts[face[0]].xzy();
-		const glm::vec3& v1 = l*verts[face[1]].xzy();
-		const glm::vec3& v2 = l*verts[face[2]].xzy();
-
-		va_.add_vertex({ { v0.x, v0.y, v0.z }, { frand(0, .125), frand(0, .125), frand(0, .5) } });
-		va_.add_vertex({ { v1.x, v1.y, v1.z }, { frand(0, .125), frand(0, .125), frand(0, .5) } });
-		va_.add_vertex({ { v2.x, v2.y, v2.z }, { frand(0, .125), frand(0, .125), frand(0, .5) } });
+		va_.add_index(face[0]);
+		va_.add_index(face[1]);
+		va_.add_index(face[2]);
 	}
 }
 

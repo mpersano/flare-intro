@@ -40,6 +40,8 @@ text::label::label(const char *source, int x, int y, float start_t, float durati
 	va_.add_vertex({ { x, y + h }, { 0, 0 } });
 	va_.add_vertex({ { x + w, y + h }, { du, 0 } });
 
+	va_.buffer(GL_STATIC_DRAW);
+
 	int num_twitches = 3 + irand()%7;
 	for (int i = 0; i < num_twitches; i++)
 		twitches_.push_back(std::make_pair<float, float>(frand(0, duration_), frand(.05, .6)));
