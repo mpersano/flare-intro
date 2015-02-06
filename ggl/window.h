@@ -7,7 +7,7 @@ namespace ggl {
 class window
 {
 public:
-	window(int width, int height, bool fullscreen = false);
+	window(int width, int height, const char *caption, bool fullscreen = false);
 	virtual ~window();
 
 	void set_dump_frames(bool b);

@@ -52,7 +52,7 @@ private:
 };
 
 intro_window::intro_window(bool mute, bool fullscreen)
-: ggl::window(g_viewport_width, g_viewport_height, fullscreen)
+: ggl::window(g_viewport_width, g_viewport_height, "flare", fullscreen)
 , tube_(new tube)
 , text_(new text)
 , dragon_(new dragon)
@@ -120,14 +120,14 @@ intro_window::draw(float t)
 	if (player_)
 		update_spectrum_bars(t);
 
-#if 0
+#if 1
 	tube_->draw(t);
 	text_->draw(t);
 #else
 	dragon_->draw(t);
 #endif
 
-#if 1
+#if 0
 	const int FRAMES_PER_FPS_UPDATE = 16;
 
 	if (++frame_count_ == FRAMES_PER_FPS_UPDATE) {
@@ -189,8 +189,8 @@ main(int argc, char *argv[])
 	bool mute = false;
 	bool fullscreen = false;
 
-	g_viewport_width = 512;
-	g_viewport_height = 256;
+	g_viewport_width = 800;
+	g_viewport_height = 400;
 
 	int c;
 

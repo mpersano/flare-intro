@@ -51,6 +51,12 @@ irand()
 	return WELLRNG512();
 }
 
+uint32_t
+irand(int top)
+{
+	return irand()%top;
+}
+
 float
 frand()
 {

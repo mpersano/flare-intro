@@ -19,7 +19,7 @@ now()
 
 namespace ggl {
 
-window::window(int width, int height, bool fullscreen)
+window::window(int width, int height, const char *caption, bool fullscreen)
 : width_(width)
 , height_(height)
 , dump_frames_(false)
@@ -36,6 +36,8 @@ window::window(int width, int height, bool fullscreen)
 
 	if (SDL_SetVideoMode(width, height, 0, flags) == 0)
 		panic("SDL_SetVideoMode: %s", SDL_GetError());
+
+	SDL_WM_SetCaption(caption, NULL);
 
 	if (GLenum rv = glewInit())
 		panic("glewInit: %s", glewGetErrorString(rv));

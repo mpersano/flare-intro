@@ -19,7 +19,7 @@ gen_image()
 		$4
 }
 
-for i in 0 1 2 5; do
+for i in x 7 d f; do
 	gen_image 64x96 ${LARGE_POINTSIZE} $i $i.png
 done
 

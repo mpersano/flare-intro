@@ -1,4 +1,5 @@
 #include <cmath>
+#include <cstdio>
 
 #include <ggl/vertex_array.h>
 #include <ggl/pixmap.h>
@@ -15,7 +16,7 @@ const float FADE_OUT_DURATION = 1;
 
 }
 
-text::label::label(const char *source, int x, int y, float start_t, float duration)
+text::label::label(const char *source, int x, int y, float start_t, float duration, int num_twitches)
 : start_t_(start_t)
 , duration_(duration)
 {
@@ -42,7 +43,6 @@ text::label::label(const char *source, int x, int y, float start_t, float durati
 
 	va_.buffer(GL_STATIC_DRAW);
 
-	int num_twitches = 3 + irand()%7;
 	for (int i = 0; i < num_twitches; i++)
 		twitches_.push_back(std::make_pair<float, float>(frand(0, duration_), frand(.05, .6)));
 }
@@ -97,12 +97,30 @@ text::text()
 	} label_defs[] = {
 		{ "data/images/code.png", 20, 70, 1, 4 },
 		{ "data/images/fuse.png", 20, 20, 2, 3 },
-		{ "data/images/music.png", 20, 70, 4, 4 },
-		{ "data/images/emortal.png", 20, 20, 5, 3 },
+		{ "data/images/music.png", 20, 70, 9, 4 },
+		{ "data/images/emortal.png", 20, 20, 10, 3 },
 	};
 
 	for (const auto& p : label_defs)
-		labels_.push_back(std::unique_ptr<label>(new label(p.source, p.x, p.y, p.start_t, p.duration)));
+		labels_.push_back(std::unique_ptr<label>(new label(p.source, p.x, p.y, p.start_t, p.duration, 3 + irand(7))));
+
+	const int CHAR_WIDTH = 64, CHAR_HEIGHT = 96, TITLE_START = 13, TITLE_DURATION = 9;
+
+	const char title[] = { 'x', '7', 'd', 'f' };
+
+	float x = .5f*(g_viewport_width - sizeof(title)*CHAR_WIDTH);
+	float y = .5f*(g_viewport_height - CHAR_HEIGHT);
+
+	for (char ch : { 'x', '7', 'd', 'f' }) {
+		char source[80];
+		sprintf(source, "data/images/%c.png", ch);
+
+		int start = irand(5);
+
+		labels_.push_back(std::unique_ptr<label>(new label(source, x, y, TITLE_START + start, TITLE_DURATION - start, 7 + irand(5))));
+
+		x += CHAR_WIDTH;
+	}
 }
 
 void

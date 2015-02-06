@@ -18,7 +18,7 @@ private:
 
 	class label {
 	public:
-		label(const char *source, int x, int y, float start_t, float duration);
+		label(const char *source, int x, int y, float start_t, float duration, int num_twitches);
 
 		void draw(float t) const;
 
